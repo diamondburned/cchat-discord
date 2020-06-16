@@ -1,24 +1,28 @@
 package discord
 
 import (
+	"context"
+
+	"github.com/diamondburned/arikawa/discord"
 	"github.com/diamondburned/arikawa/state"
 	"github.com/diamondburned/cchat"
 	"github.com/diamondburned/cchat/text"
+	"github.com/diamondburned/ningen"
 	"github.com/pkg/errors"
 )
 
 type Service struct{}
 
 var (
-	_ cchat.Service = (*Service)(nil)
 	_ cchat.Icon    = (*Service)(nil)
+	_ cchat.Service = (*Service)(nil)
 )
 
 func (Service) Name() text.Rich {
 	return text.Rich{Content: "Discord"}
 }
 
-func (Service) Icon(iconer cchat.IconContainer) error {
+func (Service) Icon(ctx context.Context, iconer cchat.IconContainer) error {
 	iconer.SetIcon("https://discord.com/assets/2c21aeda16de354ba5334551a883b481.png")
 	return nil
 }
@@ -51,33 +55,60 @@ func (Authenticator) Authenticate(form []string) (cchat.Session, error) {
 		return nil, err
 	}
 
+	return NewSession(s)
+}
+
+type Session struct {
+	*ningen.State
+	userID discord.Snowflake
+}
+
+var (
+	_ cchat.Icon         = (*Session)(nil)
+	_ cchat.Session      = (*Session)(nil)
+	_ cchat.ServerList   = (*Session)(nil)
+	_ cchat.SessionSaver = (*Session)(nil)
+)
+
+func NewSession(s *state.State) (*Session, error) {
 	// Prefetch user.
-	_, err = s.Me()
+	u, err := s.Me()
 	if err != nil {
 		return nil, errors.Wrap(err, "Failed to get current user")
 	}
 
+	n, err := ningen.FromState(s)
+	if err != nil {
+		return nil, errors.Wrap(err, "Failed to create a state wrapper")
+	}
+
 	return &Session{
-		State: s,
+		userID: u.ID,
+		State:  n,
 	}, nil
 }
 
-type Session struct {
-	*state.State
-}
-
 func (s *Session) ID() string {
-	u, _ := s.Store.Me()
-	return u.ID.String()
+	return s.userID.String()
 }
 
 func (s *Session) Name() text.Rich {
-	u, _ := s.Store.Me()
+	u, err := s.Store.Me()
+	if err != nil {
+		// This shouldn't happen, ever.
+		return text.Rich{Content: "<@" + s.userID.String() + ">"}
+	}
+
 	return text.Rich{Content: u.Username + "#" + u.Discriminator}
 }
 
-func (s *Session) Icon(iconer cchat.IconContainer) error {
-	u, _ := s.Store.Me()
+func (s *Session) Icon(ctx context.Context, iconer cchat.IconContainer) error {
+	u, err := s.Store.Me()
+	if err != nil {
+		return errors.Wrap(err, "Failed to get the current user")
+	}
+
+	// Thanks to arikawa, AvatarURL is never empty.
 	iconer.SetIcon(u.AvatarURL())
 	return nil
 }
