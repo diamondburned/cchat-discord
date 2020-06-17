@@ -125,24 +125,24 @@ func NewMessageUpdateAuthor(msg discord.Message, member discord.Member, g discor
 	}
 }
 
-// NewMessageWithSession uses the session to create a message. It does not do
+// NewMessageCreate uses the session to create a message. It does not do
 // API calls. Member is optional.
-func NewMessageWithMember(m discord.Message, s *Session, mem *discord.Member) Message {
+func NewMessageCreate(c *gateway.MessageCreateEvent, s *Session) Message {
 	// This should not error.
-	g, err := s.Store.Guild(m.GuildID)
+	g, err := s.Store.Guild(c.GuildID)
 	if err != nil {
-		return NewMessage(m, NewUser(m.Author))
+		return NewMessage(c.Message, NewUser(c.Author))
 	}
 
-	if mem == nil {
-		mem, _ = s.Store.Member(m.GuildID, m.Author.ID)
+	if c.Member == nil {
+		c.Member, _ = s.Store.Member(c.GuildID, c.Author.ID)
 	}
-	if mem == nil {
-		s.Members.RequestMember(m.GuildID, m.Author.ID)
-		return NewMessage(m, NewUser(m.Author))
+	if c.Member == nil {
+		s.Members.RequestMember(c.GuildID, c.Author.ID)
+		return NewMessage(c.Message, NewUser(c.Author))
 	}
 
-	return NewMessage(m, NewGuildMember(*mem, *g))
+	return NewMessage(c.Message, NewGuildMember(*c.Member, *g))
 }
 
 // NewBacklogMessage uses the session to create a message fetched from the

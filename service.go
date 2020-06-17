@@ -16,6 +16,9 @@ func init() {
 	services.RegisterService(&Service{})
 }
 
+// ErrInvalidSession is returned if SessionRestore is given a bad session.
+var ErrInvalidSession = errors.New("invalid session")
+
 type Service struct{}
 
 var (
@@ -36,6 +39,15 @@ func (Service) Authenticate() cchat.Authenticator {
 	return Authenticator{}
 }
 
+func (s Service) RestoreSession(data map[string]string) (cchat.Session, error) {
+	tk, ok := data["token"]
+	if !ok {
+		return nil, ErrInvalidSession
+	}
+
+	return NewSessionToken(tk)
+}
+
 type Authenticator struct{}
 
 var _ cchat.Authenticator = (*Authenticator)(nil)
@@ -51,16 +63,7 @@ func (Authenticator) AuthenticateForm() []cchat.AuthenticateEntry {
 }
 
 func (Authenticator) Authenticate(form []string) (cchat.Session, error) {
-	s, err := state.New(form[0])
-	if err != nil {
-		return nil, err
-	}
-
-	if err := s.Open(); err != nil {
-		return nil, err
-	}
-
-	return NewSession(s)
+	return NewSessionToken(form[0])
 }
 
 type Session struct {
@@ -71,9 +74,21 @@ type Session struct {
 var (
 	_ cchat.Icon         = (*Session)(nil)
 	_ cchat.Session      = (*Session)(nil)
-	_ cchat.ServerList   = (*Session)(nil)
 	_ cchat.SessionSaver = (*Session)(nil)
 )
+
+func NewSessionToken(token string) (*Session, error) {
+	s, err := state.New(token)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := s.Open(); err != nil {
+		return nil, err
+	}
+
+	return NewSession(s)
+}
 
 func NewSession(s *state.State) (*Session, error) {
 	// Prefetch user.
@@ -108,7 +123,7 @@ func (s *Session) Name() text.Rich {
 }
 
 func (s *Session) Icon(ctx context.Context, iconer cchat.IconContainer) error {
-	u, err := s.Store.Me()
+	u, err := s.Me()
 	if err != nil {
 		return errors.Wrap(err, "Failed to get the current user")
 	}

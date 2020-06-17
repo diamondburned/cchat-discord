@@ -3,6 +3,7 @@ package discord
 import (
 	"context"
 
+	"github.com/diamondburned/arikawa/api"
 	"github.com/diamondburned/arikawa/discord"
 	"github.com/diamondburned/arikawa/gateway"
 	"github.com/diamondburned/cchat"
@@ -88,6 +89,8 @@ func (ch *Channel) JoinServer(ctx context.Context, ct cchat.MessagesContainer) (
 
 	var addcancel = newCancels()
 
+	var constructor func(discord.Message) cchat.MessageCreate
+
 	if ch.guildID.Valid() {
 		// Create the backlog without any member information.
 		g, err := state.Guild(ch.guildID)
@@ -95,8 +98,16 @@ func (ch *Channel) JoinServer(ctx context.Context, ct cchat.MessagesContainer) (
 			return nil, errors.Wrap(err, "Failed to get guild")
 		}
 
+		constructor = func(m discord.Message) cchat.MessageCreate {
+			return NewBacklogMessage(m, ch.session, *g)
+		}
+
 		// Listen to new members before creating the backlog and requesting members.
 		addcancel(ch.session.AddHandler(func(c *gateway.GuildMembersChunkEvent) {
+			if c.GuildID != ch.guildID {
+				return
+			}
+
 			m, err := ch.session.Store.Messages(ch.id)
 			if err != nil {
 				// TODO: log
@@ -108,9 +119,10 @@ func (ch *Channel) JoinServer(ctx context.Context, ct cchat.MessagesContainer) (
 				return
 			}
 
-			for _, member := range c.Members {
-				// Loop over all messages and replace the author.
-				for _, msg := range m {
+			// Loop over all messages and replace the author. The latest
+			// messages are in front.
+			for _, msg := range m {
+				for _, member := range c.Members {
 					if msg.Author.ID != member.User.ID {
 						continue
 					}
@@ -119,31 +131,34 @@ func (ch *Channel) JoinServer(ctx context.Context, ct cchat.MessagesContainer) (
 				}
 			}
 		}))
-
-		for _, m := range m {
-			ct.CreateMessage(NewBacklogMessage(m, ch.session, *g))
-		}
-
 	} else {
-		for _, m := range m {
-			ct.CreateMessage(NewDirectMessage(m))
+		constructor = func(m discord.Message) cchat.MessageCreate {
+			return NewDirectMessage(m)
 		}
+	}
+
+	// Iterate from the earliest messages to the latest messages.
+	for i := len(m) - 1; i >= 0; i-- {
+		ct.CreateMessage(constructor(m[i]))
 	}
 
 	// Bind the handler.
 	addcancel(
 		ch.session.AddHandler(func(m *gateway.MessageCreateEvent) {
-			ct.CreateMessage(NewMessageWithMember(m.Message, ch.session, m.Member))
+			if m.ChannelID == ch.id {
+				ct.CreateMessage(NewMessageCreate(m, ch.session))
+			}
 		}),
 		ch.session.AddHandler(func(m *gateway.MessageUpdateEvent) {
 			// If the updated content is empty. TODO: add embed support.
-			if m.Content == "" {
-				return
+			if m.ChannelID == ch.id && m.Content != "" {
+				ct.UpdateMessage(NewMessageUpdateContent(m.Message))
 			}
-			ct.UpdateMessage(NewMessageUpdateContent(m.Message))
 		}),
 		ch.session.AddHandler(func(m *gateway.MessageDeleteEvent) {
-			ct.DeleteMessage(NewHeaderDelete(m))
+			if m.ChannelID == ch.id {
+				ct.DeleteMessage(NewHeaderDelete(m))
+			}
 		}),
 	)
 
@@ -151,7 +166,12 @@ func (ch *Channel) JoinServer(ctx context.Context, ct cchat.MessagesContainer) (
 }
 
 func (ch *Channel) SendMessage(msg cchat.SendableMessage) error {
-	_, err := ch.session.SendText(ch.id, msg.Content())
+	var send = api.SendMessageData{Content: msg.Content()}
+	if noncer, ok := msg.(cchat.MessageNonce); ok {
+		send.Nonce = noncer.Nonce()
+	}
+
+	_, err := ch.session.SendMessageComplex(ch.id, send)
 	return err
 }
 
