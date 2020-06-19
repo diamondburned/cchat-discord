@@ -45,7 +45,7 @@ func RenderNode(source []byte, n ast.Node) text.Rich {
 	ast.Walk(n, r.renderNode)
 
 	return text.Rich{
-		Content:  string(bytes.TrimSpace(buf.Bytes())),
+		Content:  buf.String(),
 		Segments: r.segs,
 	}
 }
@@ -57,14 +57,17 @@ func (r *TextRenderer) i() int {
 
 // startBlock guarantees enough indentation to start a new block.
 func (r *TextRenderer) startBlock() {
-	var maxNewlines = 2
+	var maxNewlines = 0
 
-	// Peek twice.
-	if r.peekLast(0) == '\n' {
-		maxNewlines--
-	}
-	if r.peekLast(1) == '\n' {
-		maxNewlines--
+	// Peek twice. If the last character is already a new line or we're only at
+	// the start of line (length 0), then don't pad.
+	if r.buf.Len() > 0 {
+		if r.peekLast(0) != '\n' {
+			maxNewlines++
+		}
+		if r.peekLast(1) != '\n' {
+			maxNewlines++
+		}
 	}
 
 	// Write the padding.

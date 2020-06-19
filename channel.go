@@ -12,6 +12,50 @@ import (
 	"github.com/pkg/errors"
 )
 
+func chGuildCheck(chType discord.ChannelType) bool {
+	switch chType {
+	case discord.GuildCategory, discord.GuildText:
+		return true
+	default:
+		return false
+	}
+}
+
+func filterAccessible(s *Session, chs []discord.Channel) []discord.Channel {
+	u, err := s.Me()
+	if err != nil {
+		// Shouldn't happen.
+		return chs
+	}
+
+	filtered := chs[:0]
+
+	for _, ch := range chs {
+		p, err := s.Permissions(ch.ID, u.ID)
+		if err != nil {
+			continue
+		}
+
+		if p.Has(discord.PermissionViewChannel) {
+			filtered = append(filtered, ch)
+		}
+	}
+
+	return filtered
+}
+
+func filterCategory(chs []discord.Channel, catID discord.Snowflake) []discord.Channel {
+	var filtered = chs[:0]
+
+	for _, ch := range chs {
+		if ch.CategoryID == catID && chGuildCheck(ch.Type) {
+			filtered = append(filtered, ch)
+		}
+	}
+
+	return filtered
+}
+
 type Channel struct {
 	id      discord.Snowflake
 	guildID discord.Snowflake

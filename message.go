@@ -61,7 +61,7 @@ func NewUser(u discord.User) Author {
 	return Author{
 		id:     u.ID,
 		name:   text.Rich{Content: u.Username},
-		avatar: u.AvatarURL() + "?size=128",
+		avatar: u.AvatarURL(),
 	}
 }
 
@@ -85,7 +85,7 @@ func NewGuildMember(m discord.Member, g discord.Guild) Author {
 	return Author{
 		id:     m.User.ID,
 		name:   name,
-		avatar: m.User.AvatarURL() + "?size=128",
+		avatar: m.User.AvatarURL(),
 	}
 }
 

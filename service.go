@@ -133,21 +133,6 @@ func (s *Session) Icon(ctx context.Context, iconer cchat.IconContainer) error {
 	return nil
 }
 
-func (s *Session) Servers(container cchat.ServersContainer) error {
-	g, err := s.Guilds()
-	if err != nil {
-		return err
-	}
-
-	var servers = make([]cchat.Server, len(g))
-	for i := range g {
-		servers[i] = NewGuild(s, &g[i])
-	}
-
-	container.SetServers(servers)
-	return nil
-}
-
 func (s *Session) Disconnect() error {
 	return s.Close()
 }
@@ -156,4 +141,63 @@ func (s *Session) Save() (map[string]string, error) {
 	return map[string]string{
 		"token": s.Token,
 	}, nil
+}
+
+func (s *Session) Servers(container cchat.ServersContainer) error {
+	switch {
+	// If the user has guild folders:
+	case len(s.Ready.Settings.GuildFolders) > 0:
+		// TODO: account for missing guilds.
+		var toplevels = make([]cchat.Server, 0, len(s.Ready.Settings.GuildFolders))
+
+		for _, folder := range s.Ready.Settings.GuildFolders {
+			// TODO: correct.
+			switch {
+			case folder.ID.Valid():
+				fallthrough
+			case len(folder.GuildIDs) > 1:
+				toplevels = append(toplevels, NewGuildFolder(s, folder))
+
+			case len(folder.GuildIDs) == 1:
+				g, err := NewGuildFromID(s, folder.GuildIDs[0])
+				if err != nil {
+					return errors.Wrap(err, "Failed to get guild in folder")
+				}
+				toplevels = append(toplevels, g)
+			}
+		}
+
+		container.SetServers(toplevels)
+
+	// If the user doesn't have guild folders but has sorted their guilds
+	// before:
+	case len(s.Ready.Settings.GuildPositions) > 0:
+		var guilds = make([]cchat.Server, 0, len(s.Ready.Settings.GuildPositions))
+
+		for _, id := range s.Ready.Settings.GuildPositions {
+			g, err := NewGuildFromID(s, id)
+			if err != nil {
+				return errors.Wrap(err, "Failed to get guild in position")
+			}
+			guilds = append(guilds, g)
+		}
+
+		container.SetServers(guilds)
+
+	// None of the above:
+	default:
+		g, err := s.Guilds()
+		if err != nil {
+			return err
+		}
+
+		var servers = make([]cchat.Server, len(g))
+		for i := range g {
+			servers[i] = NewGuild(s, &g[i])
+		}
+
+		container.SetServers(servers)
+	}
+
+	return nil
 }

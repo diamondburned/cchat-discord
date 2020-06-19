@@ -3,6 +3,10 @@ github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSs
 github.com/diamondburned/arikawa v0.8.7-0.20200522214036-530bff74a2c6/go.mod h1:nIhVIatzTQhPUa7NB8w4koG1RF9gYbpAr8Fj8sKq660=
 github.com/diamondburned/arikawa v0.9.4 h1:Mrp0Vz9R2afbvhWS6m/oLIQy22/uxXb459LUv7qrZPA=
 github.com/diamondburned/arikawa v0.9.4/go.mod h1:nIhVIatzTQhPUa7NB8w4koG1RF9gYbpAr8Fj8sKq660=
+github.com/diamondburned/arikawa v0.9.5-0.20200619075944-01021f09025b h1:fTR1esGjH+rR3ssd2vlZoxYLtML29paO0JjRV2lB3s0=
+github.com/diamondburned/arikawa v0.9.5-0.20200619075944-01021f09025b/go.mod h1:nIhVIatzTQhPUa7NB8w4koG1RF9gYbpAr8Fj8sKq660=
+github.com/diamondburned/arikawa v0.9.5 h1:P1ffsp+NHT22wWKYFVC8CdlGRLzPuUV9FcCBKOCJpCI=
+github.com/diamondburned/arikawa v0.9.5/go.mod h1:nIhVIatzTQhPUa7NB8w4koG1RF9gYbpAr8Fj8sKq660=
 github.com/diamondburned/cchat v0.0.26 h1:QBt4d65uzUPJz3jF8b2pJ09Jz8LeBRyG2ol47FOy0g0=
 github.com/diamondburned/cchat v0.0.26/go.mod h1:+zXktogE45A0om4fT6B/z6Ii7FXNafjxsNspI0rlhbU=
 github.com/diamondburned/cchat v0.0.28 h1:+1VnltW0rl8/NZTUP+x89jVhi3YTTR+e6iLprZ7HcwM=
@@ -11,6 +15,10 @@ github.com/diamondburned/cchat v0.0.31 h1:yUgrh5xbGX0R55glyxYtVewIDL2eXLJ+okIEfV
 github.com/diamondburned/cchat v0.0.31/go.mod h1:+zXktogE45A0om4fT6B/z6Ii7FXNafjxsNspI0rlhbU=
 github.com/diamondburned/ningen v0.0.0-20200610212436-159f7105a2be h1:mUw8X/YzJGFSdL8y3Q/XqyzqPyIMNVSDyZGOP3JXgJA=
 github.com/diamondburned/ningen v0.0.0-20200610212436-159f7105a2be/go.mod h1:B2hq2B4va1MlnMmXuv9vXmyu9gscxJLmwrmcSB1Les8=
+github.com/diamondburned/ningen v0.0.0-20200619080103-03201e09d2a9 h1:KmmKgOVCXiRufPhBWlGpSILM6ZAUvgATMelQfYNpZIw=
+github.com/diamondburned/ningen v0.0.0-20200619080103-03201e09d2a9/go.mod h1:Oxl8JrIoyo/OTx2xq9DnvvkJ3V3fUeI6cftO4LmNX84=
+github.com/diamondburned/ningen v0.1.0 h1:cTnRNrN0g2Wr/kgjLLpa3pqlbEd6JPNa1yGDer8uV4U=
+github.com/diamondburned/ningen v0.1.0/go.mod h1:1vi8mlBlM2xjJy+IugU51q+IMgyNXggS4Xv3SPFd2Q4=
 github.com/go-test/deep v1.0.6 h1:UHSEyLZUwX9Qoi99vVwvewiMC8mM2bf7XEM2nqvzEn8=
 github.com/go-test/deep v1.0.6/go.mod h1:QV8Hv/iy04NyLBxAdO9njL0iVPN1S4d/A3NVv1V36o8=
 github.com/gorilla/schema v1.1.0 h1:CamqUDOFUBqzrvxuz2vEwo8+SUdwsluFh7IlzJh30LY=

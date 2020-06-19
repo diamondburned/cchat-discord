@@ -2,12 +2,82 @@ package discord
 
 import (
 	"context"
+	"sort"
+	"strings"
 
 	"github.com/diamondburned/arikawa/discord"
+	"github.com/diamondburned/arikawa/gateway"
 	"github.com/diamondburned/cchat"
+	"github.com/diamondburned/cchat-discord/segments"
 	"github.com/diamondburned/cchat/text"
 	"github.com/pkg/errors"
 )
+
+type GuildFolder struct {
+	gateway.GuildFolder
+	session *Session
+}
+
+var (
+	_ cchat.Server     = (*Guild)(nil)
+	_ cchat.ServerList = (*Guild)(nil)
+)
+
+func NewGuildFolder(s *Session, gf gateway.GuildFolder) *GuildFolder {
+	// Name should never be empty.
+	if gf.Name == "" {
+		var names = make([]string, 0, len(gf.GuildIDs))
+
+		for _, id := range gf.GuildIDs {
+			if g, _ := s.Store.Guild(id); g != nil {
+				names = append(names, g.Name)
+			}
+		}
+
+		gf.Name = strings.Join(names, ", ")
+	}
+
+	return &GuildFolder{
+		GuildFolder: gf,
+		session:     s,
+	}
+}
+
+func (gf *GuildFolder) ID() string {
+	return gf.GuildFolder.ID.String()
+}
+
+func (gf *GuildFolder) Name() text.Rich {
+	var name = text.Rich{
+		// 1en space for style.
+		Content: gf.GuildFolder.Name,
+	}
+
+	if gf.GuildFolder.Color > 0 {
+		name.Segments = []text.Segment{
+			// The length of this black box is actually 3. Mind == blown.
+			segments.NewColored(len(name.Content), gf.GuildFolder.Color.Uint32()),
+		}
+	}
+
+	return name
+}
+
+func (gf *GuildFolder) Servers(container cchat.ServersContainer) error {
+	var servers = make([]cchat.Server, len(gf.GuildIDs))
+
+	for i, id := range gf.GuildIDs {
+		g, err := gf.session.Guild(id)
+		if err != nil {
+			return errors.Wrap(err, "Failed to get guild ID "+id.String())
+		}
+
+		servers[i] = NewGuild(gf.session, g)
+	}
+
+	container.SetServers(servers)
+	return nil
+}
 
 type Guild struct {
 	id      discord.Snowflake
@@ -25,6 +95,15 @@ func NewGuild(s *Session, g *discord.Guild) *Guild {
 		id:      g.ID,
 		session: s,
 	}
+}
+
+func NewGuildFromID(s *Session, gID discord.Snowflake) (*Guild, error) {
+	g, err := s.Guild(gID)
+	if err != nil {
+		return nil, err
+	}
+
+	return NewGuild(s, g), nil
 }
 
 func (g *Guild) self(ctx context.Context) (*discord.Guild, error) {
@@ -68,11 +147,24 @@ func (g *Guild) Servers(container cchat.ServersContainer) error {
 		return errors.Wrap(err, "Failed to get channels")
 	}
 
-	var channels = make([]cchat.Server, len(c))
-	for i := range c {
-		channels[i] = NewChannel(g.session, c[i])
+	// Only get top-level channels (those with category ID being null).
+	var toplevels = filterAccessible(g.session, filterCategory(c, discord.NullSnowflake))
+
+	sort.Slice(toplevels, func(i, j int) bool {
+		return toplevels[i].Position < toplevels[j].Position
+	})
+
+	var chs = make([]cchat.Server, 0, len(toplevels))
+
+	for _, ch := range toplevels {
+		switch ch.Type {
+		case discord.GuildCategory:
+			chs = append(chs, NewCategory(g.session, ch))
+		case discord.GuildText:
+			chs = append(chs, NewChannel(g.session, ch))
+		}
 	}
 
-	container.SetServers(channels)
+	container.SetServers(chs)
 	return nil
 }
