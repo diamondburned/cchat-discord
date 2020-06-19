@@ -2,6 +2,7 @@ package segments
 
 import (
 	"bytes"
+	"strings"
 
 	"github.com/diamondburned/arikawa/discord"
 	"github.com/diamondburned/arikawa/state"
@@ -44,7 +45,7 @@ func RenderNode(source []byte, n ast.Node) text.Rich {
 	ast.Walk(n, r.renderNode)
 
 	return text.Rich{
-		Content:  buf.String(),
+		Content:  string(bytes.TrimSpace(buf.Bytes())),
 		Segments: r.segs,
 	}
 }
@@ -52,6 +53,34 @@ func RenderNode(source []byte, n ast.Node) text.Rich {
 // i returns the current cursor position.
 func (r *TextRenderer) i() int {
 	return r.buf.Len()
+}
+
+// startBlock guarantees enough indentation to start a new block.
+func (r *TextRenderer) startBlock() {
+	var maxNewlines = 2
+
+	// Peek twice.
+	if r.peekLast(0) == '\n' {
+		maxNewlines--
+	}
+	if r.peekLast(1) == '\n' {
+		maxNewlines--
+	}
+
+	// Write the padding.
+	r.buf.WriteString(strings.Repeat("\n", maxNewlines))
+}
+
+func (r *TextRenderer) endBlock() {
+	// Do the same thing as starting a block.
+	r.startBlock()
+}
+
+func (r *TextRenderer) peekLast(offset int) byte {
+	if i := r.buf.Len() - offset - 1; i > 0 {
+		return r.buf.Bytes()[i]
+	}
+	return 0
 }
 
 func (r *TextRenderer) append(segs ...text.Segment) {

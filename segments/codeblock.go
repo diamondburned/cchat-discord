@@ -14,6 +14,9 @@ var _ text.Codeblocker = (*CodeblockSegment)(nil)
 
 func (r *TextRenderer) codeblock(n *ast.FencedCodeBlock, enter bool) ast.WalkStatus {
 	if enter {
+		r.startBlock()
+		defer r.endBlock()
+
 		// Create a segment.
 		seg := CodeblockSegment{
 			start:    r.i(),

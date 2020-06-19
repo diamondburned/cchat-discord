@@ -13,6 +13,9 @@ var _ text.Quoteblocker = (*BlockquoteSegment)(nil)
 
 func (r *TextRenderer) blockquote(n *ast.Blockquote, enter bool) ast.WalkStatus {
 	if enter {
+		r.startBlock()
+		defer r.endBlock()
+
 		// Create a segment.
 		var seg = BlockquoteSegment{start: r.i()}
 
