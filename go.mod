@@ -3,7 +3,6 @@ module github.com/diamondburned/cchat-discord
 go 1.14
 
 require (
-	github.com/davecgh/go-spew v1.1.1
 	github.com/diamondburned/arikawa v0.9.5
 	github.com/diamondburned/cchat v0.0.31
 	github.com/diamondburned/ningen v0.1.0

@@ -59,7 +59,6 @@ func filterCategory(chs []discord.Channel, catID discord.Snowflake) []discord.Ch
 type Channel struct {
 	id      discord.Snowflake
 	guildID discord.Snowflake
-	name    string
 	session *Session
 }
 
@@ -77,7 +76,6 @@ func NewChannel(s *Session, ch discord.Channel) *Channel {
 	return &Channel{
 		id:      ch.ID,
 		guildID: ch.GuildID,
-		name:    ch.Name,
 		session: s,
 	}
 }
@@ -87,7 +85,16 @@ func (ch *Channel) ID() string {
 }
 
 func (ch *Channel) Name() text.Rich {
-	return text.Rich{Content: "#" + ch.name}
+	c, err := ch.session.Store.Channel(ch.id)
+	if err != nil {
+		return text.Rich{Content: ch.id.String()}
+	}
+
+	if c.NSFW {
+		return text.Rich{Content: "#!" + c.Name}
+	} else {
+		return text.Rich{Content: "#" + c.Name}
+	}
 }
 
 func (ch *Channel) Nickname(ctx context.Context, labeler cchat.LabelContainer) error {
