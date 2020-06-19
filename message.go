@@ -131,7 +131,7 @@ func NewMessageCreate(c *gateway.MessageCreateEvent, s *Session) Message {
 	// This should not error.
 	g, err := s.Store.Guild(c.GuildID)
 	if err != nil {
-		return NewMessage(c.Message, NewUser(c.Author))
+		return NewMessage(c.Message, s, NewUser(c.Author))
 	}
 
 	if c.Member == nil {
@@ -139,10 +139,10 @@ func NewMessageCreate(c *gateway.MessageCreateEvent, s *Session) Message {
 	}
 	if c.Member == nil {
 		s.Members.RequestMember(c.GuildID, c.Author.ID)
-		return NewMessage(c.Message, NewUser(c.Author))
+		return NewMessage(c.Message, s, NewUser(c.Author))
 	}
 
-	return NewMessage(c.Message, NewGuildMember(*c.Member, *g))
+	return NewMessage(c.Message, s, NewGuildMember(*c.Member, *g))
 }
 
 // NewBacklogMessage uses the session to create a message fetched from the
@@ -152,27 +152,27 @@ func NewBacklogMessage(m discord.Message, s *Session, g discord.Guild) Message {
 	// If the message doesn't have a guild, then we don't need all the
 	// complicated member fetching process.
 	if !m.GuildID.Valid() {
-		return NewMessage(m, NewUser(m.Author))
+		return NewMessage(m, s, NewUser(m.Author))
 	}
 
 	mem, err := s.Store.Member(m.GuildID, m.Author.ID)
 	if err != nil {
 		s.Members.RequestMember(m.GuildID, m.Author.ID)
-		return NewMessage(m, NewUser(m.Author))
+		return NewMessage(m, s, NewUser(m.Author))
 	}
 
-	return NewMessage(m, NewGuildMember(*mem, g))
+	return NewMessage(m, s, NewGuildMember(*mem, g))
 }
 
-func NewDirectMessage(m discord.Message) Message {
-	return NewMessage(m, NewUser(m.Author))
+func NewDirectMessage(m discord.Message, s *Session) Message {
+	return NewMessage(m, s, NewUser(m.Author))
 }
 
-func NewMessage(m discord.Message, author Author) Message {
+func NewMessage(m discord.Message, s *Session, author Author) Message {
 	return Message{
 		messageHeader: newHeader(m),
 		author:        author,
-		content:       text.Rich{Content: m.Content},
+		content:       segments.ParseMessage(&m, s.Store),
 	}
 }
 

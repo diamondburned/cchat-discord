@@ -133,7 +133,7 @@ func (ch *Channel) JoinServer(ctx context.Context, ct cchat.MessagesContainer) (
 		}))
 	} else {
 		constructor = func(m discord.Message) cchat.MessageCreate {
-			return NewDirectMessage(m)
+			return NewDirectMessage(m, ch.session)
 		}
 	}
 
