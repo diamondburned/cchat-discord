@@ -67,9 +67,9 @@ var (
 	_ cchat.ServerMessage       = (*Channel)(nil)
 	_ cchat.ServerMessageSender = (*Channel)(nil)
 	// _ cchat.ServerMessageSendCompleter = (*Channel)(nil)
-	_ cchat.ServerNickname = (*Channel)(nil)
-	// _ cchat.ServerMessageEditor        = (*Channel)(nil)
-	// _ cchat.ServerMessageActioner      = (*Channel)(nil)
+	_ cchat.ServerNickname        = (*Channel)(nil)
+	_ cchat.ServerMessageEditor   = (*Channel)(nil)
+	_ cchat.ServerMessageActioner = (*Channel)(nil)
 )
 
 func NewChannel(s *Session, ch discord.Channel) *Channel {
@@ -224,6 +224,115 @@ func (ch *Channel) SendMessage(msg cchat.SendableMessage) error {
 
 	_, err := ch.session.SendMessageComplex(ch.id, send)
 	return err
+}
+
+func (ch *Channel) RawMessageContent(id string) (string, error) {
+	s, err := discord.ParseSnowflake(id)
+	if err != nil {
+		return "", errors.Wrap(err, "Failed to parse ID")
+	}
+
+	m, err := ch.session.Store.Message(ch.id, s)
+	if err != nil {
+		return "", errors.Wrap(err, "Failed to get the message")
+	}
+
+	return m.Content, nil
+}
+
+func (ch *Channel) EditMessage(id, content string) error {
+	s, err := discord.ParseSnowflake(id)
+	if err != nil {
+		return errors.Wrap(err, "Failed to parse ID")
+	}
+
+	_, err = ch.session.EditText(ch.id, s, content)
+	return err
+}
+
+const (
+	ActionDelete = "Delete"
+)
+
+var ErrUnknownAction = errors.New("unknown message action")
+
+func (ch *Channel) DoMessageAction(action, id string) error {
+	s, err := discord.ParseSnowflake(id)
+	if err != nil {
+		return errors.Wrap(err, "Failed to parse ID")
+	}
+
+	switch action {
+	case ActionDelete:
+		return ch.session.DeleteMessage(ch.id, s)
+	default:
+		return ErrUnknownAction
+	}
+}
+
+func (ch *Channel) MessageActions(id string) []string {
+	s, err := discord.ParseSnowflake(id)
+	if err != nil {
+		return nil
+	}
+
+	m, err := ch.session.Store.Message(ch.id, s)
+	if err != nil {
+		return nil
+	}
+
+	// Get the current user.
+	u, err := ch.session.Store.Me()
+	if err != nil {
+		return nil
+	}
+
+	// Can we have delete? We can if this is our own message.
+	var canDelete = m.Author.ID == u.ID
+
+	// We also can if we have the Manage Messages permission, which would allow
+	// us to delete others' messages.
+	if !canDelete {
+		canDelete = ch.canManageMessages(u.ID)
+	}
+
+	if canDelete {
+		return []string{ActionDelete}
+	}
+
+	return []string{}
+}
+
+// canManageMessages returns whether or not the user is allowed to manage
+// messages.
+func (ch *Channel) canManageMessages(userID discord.Snowflake) bool {
+	// If we're not in a guild, then clearly we cannot.
+	if !ch.guildID.Valid() {
+		return false
+	}
+
+	// We need the guild, member and channel to calculate the permission
+	// overrides.
+
+	g, err := ch.session.Store.Guild(ch.guildID)
+	if err != nil {
+		return false
+	}
+
+	c, err := ch.session.Store.Channel(ch.id)
+	if err != nil {
+		return false
+	}
+
+	m, err := ch.session.Store.Member(ch.guildID, userID)
+	if err != nil {
+		return false
+	}
+
+	p := discord.CalcOverwrites(*g, *c, *m)
+	// The Manage Messages permission allows the user to delete others'
+	// messages, so we'll return true if that is the case.
+	return p.Has(discord.PermissionManageMessages)
 }
 
 func newCancels() func(...func()) []func() {
