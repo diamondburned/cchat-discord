@@ -63,13 +63,13 @@ type Channel struct {
 }
 
 var (
-	_ cchat.Server              = (*Channel)(nil)
-	_ cchat.ServerMessage       = (*Channel)(nil)
-	_ cchat.ServerMessageSender = (*Channel)(nil)
-	// _ cchat.ServerMessageSendCompleter = (*Channel)(nil)
-	_ cchat.ServerNickname        = (*Channel)(nil)
-	_ cchat.ServerMessageEditor   = (*Channel)(nil)
-	_ cchat.ServerMessageActioner = (*Channel)(nil)
+	_ cchat.Server                     = (*Channel)(nil)
+	_ cchat.ServerMessage              = (*Channel)(nil)
+	_ cchat.ServerMessageSender        = (*Channel)(nil)
+	_ cchat.ServerMessageSendCompleter = (*Channel)(nil)
+	_ cchat.ServerNickname             = (*Channel)(nil)
+	_ cchat.ServerMessageEditor        = (*Channel)(nil)
+	_ cchat.ServerMessageActioner      = (*Channel)(nil)
 )
 
 func NewChannel(s *Session, ch discord.Channel) *Channel {
@@ -80,12 +80,29 @@ func NewChannel(s *Session, ch discord.Channel) *Channel {
 	}
 }
 
+// self does not do IO.
+func (ch *Channel) self() (*discord.Channel, error) {
+	return ch.session.Store.Channel(ch.id)
+}
+
+// messages does not do IO.
+func (ch *Channel) messages() ([]discord.Message, error) {
+	return ch.session.Store.Messages(ch.id)
+}
+
+func (ch *Channel) guild() (*discord.Guild, error) {
+	if ch.guildID.Valid() {
+		return ch.session.Guild(ch.guildID)
+	}
+	return nil, errors.New("channel not in a guild")
+}
+
 func (ch *Channel) ID() string {
 	return ch.id.String()
 }
 
 func (ch *Channel) Name() text.Rich {
-	c, err := ch.session.Store.Channel(ch.id)
+	c, err := ch.self()
 	if err != nil {
 		return text.Rich{Content: ch.id.String()}
 	}
@@ -159,13 +176,13 @@ func (ch *Channel) JoinServer(ctx context.Context, ct cchat.MessagesContainer) (
 				return
 			}
 
-			m, err := ch.session.Store.Messages(ch.id)
+			m, err := ch.messages()
 			if err != nil {
 				// TODO: log
 				return
 			}
 
-			g, err := ch.session.Store.Guild(c.GuildID)
+			g, err := ch.guild()
 			if err != nil {
 				return
 			}
@@ -226,6 +243,23 @@ func (ch *Channel) SendMessage(msg cchat.SendableMessage) error {
 	return err
 }
 
+// MessageEditable returns true if the given message ID belongs to the current
+// user.
+func (ch *Channel) MessageEditable(id string) bool {
+	s, err := discord.ParseSnowflake(id)
+	if err != nil {
+		return false
+	}
+
+	m, err := ch.session.Store.Message(ch.id, s)
+	if err != nil {
+		return false
+	}
+
+	return m.Author.ID == ch.session.userID
+}
+
+// RawMessageContent returns the raw message content from Discord.
 func (ch *Channel) RawMessageContent(id string) (string, error) {
 	s, err := discord.ParseSnowflake(id)
 	if err != nil {
@@ -240,6 +274,7 @@ func (ch *Channel) RawMessageContent(id string) (string, error) {
 	return m.Content, nil
 }
 
+// EditMessage edits the message to the given content string.
 func (ch *Channel) EditMessage(id, content string) error {
 	s, err := discord.ParseSnowflake(id)
 	if err != nil {
@@ -314,12 +349,12 @@ func (ch *Channel) canManageMessages(userID discord.Snowflake) bool {
 	// We need the guild, member and channel to calculate the permission
 	// overrides.
 
-	g, err := ch.session.Store.Guild(ch.guildID)
+	g, err := ch.guild()
 	if err != nil {
 		return false
 	}
 
-	c, err := ch.session.Store.Channel(ch.id)
+	c, err := ch.self()
 	if err != nil {
 		return false
 	}
@@ -333,6 +368,25 @@ func (ch *Channel) canManageMessages(userID discord.Snowflake) bool {
 	// The Manage Messages permission allows the user to delete others'
 	// messages, so we'll return true if that is the case.
 	return p.Has(discord.PermissionManageMessages)
+}
+
+func (ch *Channel) CompleteMessage(words []string, i int) (entries []cchat.CompletionEntry) {
+	var word = words[i]
+	// Word should have at least a character for the char check.
+	if len(word) < 1 {
+		return
+	}
+
+	switch word[0] {
+	case '@':
+		return ch.completeMentions(word[1:])
+	case '#':
+		return ch.completeChannels(word[1:])
+	case ':':
+		return ch.completeEmojis(word[1:])
+	}
+
+	return
 }
 
 func newCancels() func(...func()) []func() {

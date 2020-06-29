@@ -66,6 +66,14 @@ func NewUser(u discord.User) Author {
 }
 
 func NewGuildMember(m discord.Member, g discord.Guild) Author {
+	return Author{
+		id:     m.User.ID,
+		name:   RenderMemberName(m, g),
+		avatar: m.User.AvatarURL(),
+	}
+}
+
+func RenderMemberName(m discord.Member, g discord.Guild) text.Rich {
 	var name = text.Rich{
 		Content: m.User.Username,
 	}
@@ -82,11 +90,7 @@ func NewGuildMember(m discord.Member, g discord.Guild) Author {
 		}
 	}
 
-	return Author{
-		id:     m.User.ID,
-		name:   name,
-		avatar: m.User.AvatarURL(),
-	}
+	return name
 }
 
 func (a Author) ID() string {
