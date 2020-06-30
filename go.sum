@@ -29,6 +29,10 @@ github.com/diamondburned/cchat v0.0.34 h1:BGiVxMRA9dmW3rLilIldBvjVan7eTTpaWCCfX9
 github.com/diamondburned/cchat v0.0.34/go.mod h1:+zXktogE45A0om4fT6B/z6Ii7FXNafjxsNspI0rlhbU=
 github.com/diamondburned/cchat v0.0.35 h1:WiMGl8BQJgbP9E4xRxgLGlqUsHpTcJgDKDt8/6a7lBk=
 github.com/diamondburned/cchat v0.0.35/go.mod h1:+zXktogE45A0om4fT6B/z6Ii7FXNafjxsNspI0rlhbU=
+github.com/diamondburned/cchat v0.0.36 h1:fOD84RV7EUCjoOSogX/Hu5pe4tzHk3Qh7taKaojIAGc=
+github.com/diamondburned/cchat v0.0.36/go.mod h1:+zXktogE45A0om4fT6B/z6Ii7FXNafjxsNspI0rlhbU=
+github.com/diamondburned/cchat v0.0.37 h1:yGz9yls5Lb/vLkU/DU53GjC80WOqoRe229DXsu5mtaY=
+github.com/diamondburned/cchat v0.0.37/go.mod h1:+zXktogE45A0om4fT6B/z6Ii7FXNafjxsNspI0rlhbU=
 github.com/diamondburned/ningen v0.1.1-0.20200621014632-6babb812b249 h1:yP7kJ+xCGpDz6XbcfACJcju4SH1XDPwlrvbofz3lP8I=
 github.com/diamondburned/ningen v0.1.1-0.20200621014632-6babb812b249/go.mod h1:xW9hpBZsGi8KpAh10TyP+YQlYBo+Xc+2w4TR6N0951A=
 github.com/envoyproxy/go-control-plane v0.9.1-0.20191026205805-5f8ba28d4473/go.mod h1:YTl/9mNaCwkRvm6d1a2C3ymFceY/DCBVvsKhRF0iEA4=

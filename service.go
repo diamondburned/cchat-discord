@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/diamondburned/arikawa/discord"
+	"github.com/diamondburned/arikawa/gateway"
 	"github.com/diamondburned/arikawa/state"
 	"github.com/diamondburned/cchat"
 	"github.com/diamondburned/cchat/services"
@@ -30,9 +31,9 @@ func (Service) Name() text.Rich {
 	return text.Rich{Content: "Discord"}
 }
 
-func (Service) Icon(ctx context.Context, iconer cchat.IconContainer) error {
+func (Service) Icon(ctx context.Context, iconer cchat.IconContainer) (func(), error) {
 	iconer.SetIcon("https://discord.com/assets/2c21aeda16de354ba5334551a883b481.png")
-	return nil
+	return func() {}, nil
 }
 
 func (Service) Authenticate() cchat.Authenticator {
@@ -122,15 +123,18 @@ func (s *Session) Name() text.Rich {
 	return text.Rich{Content: u.Username + "#" + u.Discriminator}
 }
 
-func (s *Session) Icon(ctx context.Context, iconer cchat.IconContainer) error {
+func (s *Session) Icon(ctx context.Context, iconer cchat.IconContainer) (func(), error) {
 	u, err := s.Me()
 	if err != nil {
-		return errors.Wrap(err, "Failed to get the current user")
+		return nil, errors.Wrap(err, "Failed to get the current user")
 	}
 
 	// Thanks to arikawa, AvatarURL is never empty.
-	iconer.SetIcon(u.AvatarURL())
-	return nil
+	iconer.SetIcon(AvatarURL(u.AvatarURL()))
+
+	return s.AddHandler(func(u *gateway.UserUpdateEvent) {
+		iconer.SetIcon(AvatarURL(u.AvatarURL()))
+	}), nil
 }
 
 func (s *Session) Disconnect() error {

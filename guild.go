@@ -128,17 +128,25 @@ func (g *Guild) Name() text.Rich {
 	return text.Rich{Content: s.Name}
 }
 
-func (g *Guild) Icon(ctx context.Context, iconer cchat.IconContainer) error {
+func (g *Guild) Icon(ctx context.Context, iconer cchat.IconContainer) (func(), error) {
 	s, err := g.self(ctx)
 	if err != nil {
 		// This shouldn't happen.
-		return errors.Wrap(err, "Failed to get guild")
+		return nil, errors.Wrap(err, "Failed to get guild")
 	}
 
-	if s.Icon != "" {
-		iconer.SetIcon(s.IconURL() + "?size=64")
+	// Used for comparison.
+	var hash = s.Icon
+	if hash != "" {
+		iconer.SetIcon(AvatarURL(s.IconURL()))
 	}
-	return nil
+
+	return g.session.AddHandler(func(g *gateway.GuildUpdateEvent) {
+		if g.Icon != hash {
+			hash = g.Icon
+			iconer.SetIcon(AvatarURL(s.IconURL()))
+		}
+	}), nil
 }
 
 func (g *Guild) Servers(container cchat.ServersContainer) error {

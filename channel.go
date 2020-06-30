@@ -2,6 +2,7 @@ package discord
 
 import (
 	"context"
+	"time"
 
 	"github.com/diamondburned/arikawa/api"
 	"github.com/diamondburned/arikawa/discord"
@@ -63,13 +64,14 @@ type Channel struct {
 }
 
 var (
-	_ cchat.Server                     = (*Channel)(nil)
-	_ cchat.ServerMessage              = (*Channel)(nil)
-	_ cchat.ServerMessageSender        = (*Channel)(nil)
-	_ cchat.ServerMessageSendCompleter = (*Channel)(nil)
-	_ cchat.ServerNickname             = (*Channel)(nil)
-	_ cchat.ServerMessageEditor        = (*Channel)(nil)
-	_ cchat.ServerMessageActioner      = (*Channel)(nil)
+	_ cchat.Server                       = (*Channel)(nil)
+	_ cchat.ServerMessage                = (*Channel)(nil)
+	_ cchat.ServerMessageSender          = (*Channel)(nil)
+	_ cchat.ServerMessageSendCompleter   = (*Channel)(nil)
+	_ cchat.ServerNickname               = (*Channel)(nil)
+	_ cchat.ServerMessageEditor          = (*Channel)(nil)
+	_ cchat.ServerMessageActioner        = (*Channel)(nil)
+	_ cchat.ServerMessageTypingIndicator = (*Channel)(nil)
 )
 
 func NewChannel(s *Session, ch discord.Channel) *Channel {
@@ -114,10 +116,10 @@ func (ch *Channel) Name() text.Rich {
 	}
 }
 
-func (ch *Channel) Nickname(ctx context.Context, labeler cchat.LabelContainer) error {
+func (ch *Channel) Nickname(ctx context.Context, labeler cchat.LabelContainer) (func(), error) {
 	// We don't have a nickname if we're not in a guild.
 	if !ch.guildID.Valid() {
-		return nil
+		return func() {}, nil
 	}
 
 	state := ch.session.WithContext(ctx)
@@ -125,12 +127,12 @@ func (ch *Channel) Nickname(ctx context.Context, labeler cchat.LabelContainer) e
 	// MemberColor should fill up the state cache.
 	c, err := state.MemberColor(ch.guildID, ch.session.userID)
 	if err != nil {
-		return errors.Wrap(err, "Failed to get self member color")
+		return nil, errors.Wrap(err, "Failed to get self member color")
 	}
 
 	m, err := state.Member(ch.guildID, ch.session.userID)
 	if err != nil {
-		return errors.Wrap(err, "Failed to get self member")
+		return nil, errors.Wrap(err, "Failed to get self member")
 	}
 
 	var rich = text.Rich{Content: m.User.Username}
@@ -144,7 +146,29 @@ func (ch *Channel) Nickname(ctx context.Context, labeler cchat.LabelContainer) e
 	}
 
 	labeler.SetLabel(rich)
-	return nil
+
+	// Copy the user ID to use.
+	var selfID = m.User.ID
+
+	return ch.session.AddHandler(func(g *gateway.GuildMemberUpdateEvent) {
+		if g.GuildID != ch.guildID || g.User.ID != selfID {
+			return
+		}
+
+		var rich = text.Rich{Content: m.User.Username}
+		if m.Nick != "" {
+			rich.Content = m.Nick
+		}
+
+		c, err := ch.session.MemberColor(g.GuildID, selfID)
+		if err == nil {
+			rich.Segments = []text.Segment{
+				segments.NewColored(len(rich.Content), c.Uint32()),
+			}
+		}
+
+		labeler.SetLabel(rich)
+	}), nil
 }
 
 func (ch *Channel) JoinServer(ctx context.Context, ct cchat.MessagesContainer) (func(), error) {
@@ -370,6 +394,10 @@ func (ch *Channel) canManageMessages(userID discord.Snowflake) bool {
 	return p.Has(discord.PermissionManageMessages)
 }
 
+// CompleteMessage implements message input completion capability for Discord.
+// This method supports user mentions, channel mentions and emojis.
+//
+// For the individual implementations, refer to channel_completion.go.
 func (ch *Channel) CompleteMessage(words []string, i int) (entries []cchat.CompletionEntry) {
 	var word = words[i]
 	// Word should have at least a character for the char check.
@@ -387,6 +415,52 @@ func (ch *Channel) CompleteMessage(words []string, i int) (entries []cchat.Compl
 	}
 
 	return
+}
+
+func (ch *Channel) Typing() error {
+	return ch.session.Typing(ch.id)
+}
+
+// TypingTimeout returns 8 seconds.
+func (ch *Channel) TypingTimeout() time.Duration {
+	return 8 * time.Second
+}
+
+func (ch *Channel) TypingSubscribe(ti cchat.TypingIndicator) (func(), error) {
+	return ch.session.AddHandler(func(t *gateway.TypingStartEvent) {
+		if t.ChannelID != ch.id {
+			return
+		}
+
+		if ch.guildID.Valid() {
+			g, err := ch.session.Store.Guild(t.GuildID)
+			if err != nil {
+				return
+			}
+
+			if t.Member == nil {
+				t.Member, err = ch.session.Store.Member(t.GuildID, t.UserID)
+				if err != nil {
+					return
+				}
+			}
+
+			ti.AddTyper(NewGuildMember(*t.Member, *g))
+			return
+		}
+
+		c, err := ch.self()
+		if err != nil {
+			return
+		}
+
+		for _, user := range c.DMRecipients {
+			if user.ID == t.UserID {
+				ti.AddTyper(NewUser(user))
+				return
+			}
+		}
+	}), nil
 }
 
 func newCancels() func(...func()) []func() {

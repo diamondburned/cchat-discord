@@ -1,6 +1,7 @@
 package discord
 
 import (
+	"net/url"
 	"time"
 
 	"github.com/diamondburned/arikawa/discord"
@@ -51,6 +52,20 @@ func (m messageHeader) Time() time.Time {
 	return m.time.Time()
 }
 
+// AvatarURL wraps the URL with URL queries for the avatar.
+func AvatarURL(URL string) string {
+	u, err := url.Parse(URL)
+	if err != nil {
+		return URL
+	}
+
+	q := u.Query()
+	q.Set("size", "64")
+	u.RawQuery = q.Encode()
+
+	return u.String()
+}
+
 type Author struct {
 	id     discord.Snowflake
 	name   text.Rich
@@ -61,7 +76,7 @@ func NewUser(u discord.User) Author {
 	return Author{
 		id:     u.ID,
 		name:   text.Rich{Content: u.Username},
-		avatar: u.AvatarURL(),
+		avatar: AvatarURL(u.AvatarURL()),
 	}
 }
 
@@ -69,7 +84,7 @@ func NewGuildMember(m discord.Member, g discord.Guild) Author {
 	return Author{
 		id:     m.User.ID,
 		name:   RenderMemberName(m, g),
-		avatar: m.User.AvatarURL(),
+		avatar: AvatarURL(m.User.AvatarURL()),
 	}
 }
 
