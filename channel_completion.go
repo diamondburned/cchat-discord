@@ -65,17 +65,19 @@ func (ch *Channel) completeMentions(word string) (entries []cchat.CompletionEntr
 	// If we're not in a guild, then we can check the list of recipients.
 	if !ch.guildID.Valid() {
 		c, err := ch.self()
-		if err == nil {
-			for _, u := range c.DMRecipients {
-				if startsWith(match, u.Username) {
-					entries = append(entries, cchat.CompletionEntry{
-						Raw:     u.Mention(),
-						Text:    text.Rich{Content: u.Username},
-						IconURL: u.AvatarURL(),
-					})
-					if len(entries) >= MaxCompletion {
-						return
-					}
+		if err != nil {
+			return
+		}
+
+		for _, u := range c.DMRecipients {
+			if startsWith(match, u.Username) {
+				entries = append(entries, cchat.CompletionEntry{
+					Raw:     u.Mention(),
+					Text:    text.Rich{Content: u.Username},
+					IconURL: u.AvatarURL(),
+				})
+				if len(entries) >= MaxCompletion {
+					return
 				}
 			}
 		}
@@ -132,15 +134,26 @@ func (ch *Channel) completeChannels(word string) (entries []cchat.CompletionEntr
 
 	var match = strings.ToLower(word)
 
-	for _, ch := range c {
-		if startsWith(match, ch.Name) {
-			entries = append(entries, cchat.CompletionEntry{
-				Raw:  ch.Mention(),
-				Text: text.Rich{Content: "#" + ch.Name},
-			})
-			if len(entries) >= MaxCompletion {
-				return
+	for _, channel := range c {
+		if !startsWith(match, channel.Name) {
+			continue
+		}
+
+		var category string
+		if channel.CategoryID.Valid() {
+			if c, _ := ch.session.Store.Channel(channel.CategoryID); c != nil {
+				category = c.Name
 			}
+		}
+
+		entries = append(entries, cchat.CompletionEntry{
+			Raw:       channel.Mention(),
+			Text:      text.Rich{Content: "#" + channel.Name},
+			Secondary: text.Rich{Content: category},
+		})
+
+		if len(entries) >= MaxCompletion {
+			return
 		}
 	}
 
@@ -166,7 +179,8 @@ func (ch *Channel) completeEmojis(word string) (entries []cchat.CompletionEntry)
 				entries = append(entries, cchat.CompletionEntry{
 					Raw:     emoji.String(),
 					Text:    text.Rich{Content: ":" + emoji.Name + ":"},
-					IconURL: emoji.EmojiURL() + "?size=32", // small
+					IconURL: URLSized(emoji.EmojiURL(), 32), // small
+					Image:   true,
 				})
 				if len(entries) >= MaxCompletion {
 					return

@@ -2,6 +2,7 @@ package discord
 
 import (
 	"net/url"
+	"strconv"
 	"time"
 
 	"github.com/diamondburned/arikawa/discord"
@@ -54,13 +55,18 @@ func (m messageHeader) Time() time.Time {
 
 // AvatarURL wraps the URL with URL queries for the avatar.
 func AvatarURL(URL string) string {
+	return URLSized(URL, 64)
+}
+
+// URLSized wraps the URL with the size query.
+func URLSized(URL string, size int) string {
 	u, err := url.Parse(URL)
 	if err != nil {
 		return URL
 	}
 
 	q := u.Query()
-	q.Set("size", "64")
+	q.Set("size", strconv.Itoa(size))
 	u.RawQuery = q.Encode()
 
 	return u.String()
