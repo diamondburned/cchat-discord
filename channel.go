@@ -445,7 +445,7 @@ func (ch *Channel) TypingSubscribe(ti cchat.TypingIndicator) (func(), error) {
 				}
 			}
 
-			ti.AddTyper(NewGuildMember(*t.Member, *g))
+			ti.AddTyper(NewTyper(NewGuildMember(*t.Member, *g), t))
 			return
 		}
 
@@ -456,7 +456,7 @@ func (ch *Channel) TypingSubscribe(ti cchat.TypingIndicator) (func(), error) {
 
 		for _, user := range c.DMRecipients {
 			if user.ID == t.UserID {
-				ti.AddTyper(NewUser(user))
+				ti.AddTyper(NewTyper(NewUser(user), t))
 				return
 			}
 		}
