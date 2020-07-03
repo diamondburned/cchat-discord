@@ -431,34 +431,8 @@ func (ch *Channel) TypingSubscribe(ti cchat.TypingIndicator) (func(), error) {
 		if t.ChannelID != ch.id {
 			return
 		}
-
-		if ch.guildID.Valid() {
-			g, err := ch.session.Store.Guild(t.GuildID)
-			if err != nil {
-				return
-			}
-
-			if t.Member == nil {
-				t.Member, err = ch.session.Store.Member(t.GuildID, t.UserID)
-				if err != nil {
-					return
-				}
-			}
-
-			ti.AddTyper(NewTyper(NewGuildMember(*t.Member, *g), t))
-			return
-		}
-
-		c, err := ch.self()
-		if err != nil {
-			return
-		}
-
-		for _, user := range c.DMRecipients {
-			if user.ID == t.UserID {
-				ti.AddTyper(NewTyper(NewUser(user), t))
-				return
-			}
+		if t, err := NewTyper(ch.session.Store, t); err == nil {
+			ti.AddTyper(t)
 		}
 	}), nil
 }
