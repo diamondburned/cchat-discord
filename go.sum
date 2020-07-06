@@ -37,8 +37,12 @@ github.com/diamondburned/cchat v0.0.39 h1:Hxd7swmAIECm0MBd5wb1IFvreChwDFwnAshqgA
 github.com/diamondburned/cchat v0.0.39/go.mod h1:+zXktogE45A0om4fT6B/z6Ii7FXNafjxsNspI0rlhbU=
 github.com/diamondburned/cchat v0.0.40 h1:38gPyJnnDoNDHrXcV8Qchfv3y6jlS3Fzz/6FY0BPH6I=
 github.com/diamondburned/cchat v0.0.40/go.mod h1:+zXktogE45A0om4fT6B/z6Ii7FXNafjxsNspI0rlhbU=
+github.com/diamondburned/cchat v0.0.41 h1:6y32s2wWTiDw4hWN/Gna6ay3uUrRAW5V8Cj0/xLKovw=
+github.com/diamondburned/cchat v0.0.41/go.mod h1:+zXktogE45A0om4fT6B/z6Ii7FXNafjxsNspI0rlhbU=
 github.com/diamondburned/ningen v0.1.1-0.20200621014632-6babb812b249 h1:yP7kJ+xCGpDz6XbcfACJcju4SH1XDPwlrvbofz3lP8I=
 github.com/diamondburned/ningen v0.1.1-0.20200621014632-6babb812b249/go.mod h1:xW9hpBZsGi8KpAh10TyP+YQlYBo+Xc+2w4TR6N0951A=
+github.com/dustin/go-humanize v1.0.0 h1:VSnTsYCnlFHaM2/igO1h6X3HA71jcobQuxemgkq4zYo=
+github.com/dustin/go-humanize v1.0.0/go.mod h1:HtrtbFcZ19U5GC7JDqmcUSB87Iq5E25KnS6fMYU6eOk=
 github.com/envoyproxy/go-control-plane v0.9.1-0.20191026205805-5f8ba28d4473/go.mod h1:YTl/9mNaCwkRvm6d1a2C3ymFceY/DCBVvsKhRF0iEA4=
 github.com/envoyproxy/protoc-gen-validate v0.1.0/go.mod h1:iSmxcyjqTsJpI2R4NaDN7+kN2VEUnK/pcBlmesArF7c=
 github.com/go-gl/glfw v0.0.0-20190409004039-e6da0acd62b1/go.mod h1:vR7hzQXu2zJy9AVAgeJqvqgH9Q5CA+iKCZ2gyEVpxRU=

@@ -428,11 +428,10 @@ func (ch *Channel) TypingTimeout() time.Duration {
 
 func (ch *Channel) TypingSubscribe(ti cchat.TypingIndicator) (func(), error) {
 	return ch.session.AddHandler(func(t *gateway.TypingStartEvent) {
-		if t.ChannelID != ch.id {
-			return
-		}
-		if t, err := NewTyper(ch.session.Store, t); err == nil {
-			ti.AddTyper(t)
+		if t.ChannelID == ch.id {
+			if typer, err := NewTyper(ch.session.Store, t); err == nil {
+				ti.AddTyper(typer)
+			}
 		}
 	}), nil
 }

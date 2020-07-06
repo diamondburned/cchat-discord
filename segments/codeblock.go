@@ -14,8 +14,9 @@ var _ text.Codeblocker = (*CodeblockSegment)(nil)
 
 func (r *TextRenderer) codeblock(n *ast.FencedCodeBlock, enter bool) ast.WalkStatus {
 	if enter {
+		// Open the block by adding formatting and all.
 		r.startBlock()
-		defer r.endBlock()
+		r.buf.WriteString("---\n")
 
 		// Create a segment.
 		seg := CodeblockSegment{
@@ -34,6 +35,10 @@ func (r *TextRenderer) codeblock(n *ast.FencedCodeBlock, enter bool) ast.WalkSta
 		// Close the segment.
 		seg.end = r.i()
 		r.append(seg)
+
+		// Close the block.
+		r.buf.WriteString("\n---")
+		r.endBlock()
 	}
 
 	return ast.WalkContinue

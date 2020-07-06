@@ -6,6 +6,7 @@ import (
 	"github.com/diamondburned/arikawa/discord"
 	"github.com/diamondburned/arikawa/state"
 	"github.com/diamondburned/cchat"
+	"github.com/diamondburned/cchat-discord/urlutils"
 	"github.com/diamondburned/cchat/text"
 )
 
@@ -179,7 +180,7 @@ func (ch *Channel) completeEmojis(word string) (entries []cchat.CompletionEntry)
 				entries = append(entries, cchat.CompletionEntry{
 					Raw:     emoji.String(),
 					Text:    text.Rich{Content: ":" + emoji.Name + ":"},
-					IconURL: URLSized(emoji.EmojiURL(), 32), // small
+					IconURL: urlutils.Sized(emoji.EmojiURL(), 32), // small
 					Image:   true,
 				})
 				if len(entries) >= MaxCompletion {

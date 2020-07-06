@@ -1,14 +1,13 @@
 package discord
 
 import (
-	"net/url"
-	"strconv"
 	"time"
 
 	"github.com/diamondburned/arikawa/discord"
 	"github.com/diamondburned/arikawa/gateway"
 	"github.com/diamondburned/cchat"
 	"github.com/diamondburned/cchat-discord/segments"
+	"github.com/diamondburned/cchat-discord/urlutils"
 	"github.com/diamondburned/cchat/text"
 )
 
@@ -55,21 +54,7 @@ func (m messageHeader) Time() time.Time {
 
 // AvatarURL wraps the URL with URL queries for the avatar.
 func AvatarURL(URL string) string {
-	return URLSized(URL, 64)
-}
-
-// URLSized wraps the URL with the size query.
-func URLSized(URL string, size int) string {
-	u, err := url.Parse(URL)
-	if err != nil {
-		return URL
-	}
-
-	q := u.Query()
-	q.Set("size", strconv.Itoa(size))
-	u.RawQuery = q.Encode()
-
-	return u.String()
+	return urlutils.Sized(URL, 64)
 }
 
 type Author struct {
@@ -202,6 +187,9 @@ func NewMessage(m discord.Message, s *Session, author Author) Message {
 }
 
 func (m Message) Author() cchat.MessageAuthor {
+	if !m.author.id.Valid() {
+		return nil
+	}
 	return m.author
 }
 

@@ -14,18 +14,15 @@ var _ text.Linker = (*LinkSegment)(nil)
 
 func (r *TextRenderer) link(n *ast.Link, enter bool) ast.WalkStatus {
 	if enter {
-		// Make a segment with a start pointing to the end of buffer.
-		seg := LinkSegment{
-			start: r.i(),
-			url:   string(n.Destination),
-		}
-
 		// Write the actual title.
-		r.buf.Write(n.Title)
+		start, end := r.write(n.Title)
 
 		// Close the segment.
-		seg.end = r.i()
-		r.append(seg)
+		r.append(LinkSegment{
+			start,
+			end,
+			string(n.Destination),
+		})
 	}
 
 	return ast.WalkContinue
@@ -33,15 +30,13 @@ func (r *TextRenderer) link(n *ast.Link, enter bool) ast.WalkStatus {
 
 func (r *TextRenderer) autoLink(n *ast.AutoLink, enter bool) ast.WalkStatus {
 	if enter {
-		seg := LinkSegment{
-			start: r.i(),
-			url:   string(n.URL(r.src)),
-		}
+		start, end := r.write(n.URL(r.src))
 
-		r.buf.Write(n.URL(r.src))
-
-		seg.end = r.i()
-		r.append(seg)
+		r.append(LinkSegment{
+			start,
+			end,
+			string(n.URL((r.src))),
+		})
 	}
 
 	return ast.WalkContinue
