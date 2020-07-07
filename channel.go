@@ -33,11 +33,8 @@ func filterAccessible(s *Session, chs []discord.Channel) []discord.Channel {
 
 	for _, ch := range chs {
 		p, err := s.Permissions(ch.ID, u.ID)
-		if err != nil {
-			continue
-		}
-
-		if p.Has(discord.PermissionViewChannel) {
+		// Treat error as non-fatal and add the channel anyway.
+		if err != nil || p.Has(discord.PermissionViewChannel) {
 			filtered = append(filtered, ch)
 		}
 	}
@@ -47,10 +44,20 @@ func filterAccessible(s *Session, chs []discord.Channel) []discord.Channel {
 
 func filterCategory(chs []discord.Channel, catID discord.Snowflake) []discord.Channel {
 	var filtered = chs[:0]
+	var catvalid = catID.Valid()
 
 	for _, ch := range chs {
-		if ch.CategoryID == catID && chGuildCheck(ch.Type) {
-			filtered = append(filtered, ch)
+		switch {
+		// If the given ID is not valid, then we look for channels with
+		// similarly invalid category IDs, because yes, Discord really sends
+		// inconsistent responses.
+		case !catvalid && !ch.CategoryID.Valid():
+			fallthrough
+		// Basic comparison.
+		case ch.CategoryID == catID:
+			if chGuildCheck(ch.Type) {
+				filtered = append(filtered, ch)
+			}
 		}
 	}
 

@@ -154,10 +154,10 @@ func EmbedAuthor(start int, a discord.EmbedAuthor) AvatarSegment {
 }
 
 // EmbedFooter uses an avatar segment to comply with Discord.
-func EmbedFooter(start int, a discord.EmbedFooter) AvatarSegment {
+func EmbedFooter(start int, f discord.EmbedFooter) AvatarSegment {
 	return AvatarSegment{
 		start: start,
-		url:   a.ProxyIcon,
+		url:   f.ProxyIcon,
 		text:  "Icon",
 	}
 }
