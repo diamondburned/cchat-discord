@@ -84,10 +84,6 @@ func NewSessionToken(token string) (*Session, error) {
 		return nil, err
 	}
 
-	if err := s.Open(); err != nil {
-		return nil, err
-	}
-
 	return NewSession(s)
 }
 
@@ -101,6 +97,10 @@ func NewSession(s *state.State) (*Session, error) {
 	n, err := ningen.FromState(s)
 	if err != nil {
 		return nil, errors.Wrap(err, "Failed to create a state wrapper")
+	}
+
+	if err := s.Open(); err != nil {
+		return nil, err
 	}
 
 	return &Session{

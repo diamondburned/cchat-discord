@@ -201,6 +201,9 @@ func (ch *Channel) JoinServer(ctx context.Context, ct cchat.MessagesContainer) (
 			return NewBacklogMessage(m, ch.session, *g)
 		}
 
+		// Subscribe to typing events.
+		ch.session.Members.Subscribe(ch.guildID)
+
 		// Listen to new members before creating the backlog and requesting members.
 		addcancel(ch.session.AddHandler(func(c *gateway.GuildMembersChunkEvent) {
 			if c.GuildID != ch.guildID {
