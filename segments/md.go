@@ -127,6 +127,11 @@ func (r *TextRenderer) startBlock() {
 	r.startBlockN(2)
 }
 
+// ensureBreak ensures that the current line is a new line.
+func (r *TextRenderer) ensureBreak() {
+	r.startBlockN(1)
+}
+
 // startBlockN allows a custom block level.
 func (r *TextRenderer) startBlockN(n int) {
 	var maxNewlines = 0

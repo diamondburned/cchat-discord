@@ -33,7 +33,7 @@ func (r *TextRenderer) renderEmbed(embed discord.Embed, m *discord.Message, s st
 		}
 
 		start, end := r.writeString(a.Name)
-		r.buf.WriteByte('\n')
+		r.ensureBreak()
 
 		if a.URL != "" {
 			r.append(LinkSegment{
@@ -46,7 +46,7 @@ func (r *TextRenderer) renderEmbed(embed discord.Embed, m *discord.Message, s st
 
 	if embed.Title != "" {
 		start, end := r.writeString(embed.Title)
-		r.buf.WriteByte('\n')
+		r.ensureBreak()
 
 		if embed.URL != "" {
 			r.append(LinkSegment{
@@ -60,7 +60,7 @@ func (r *TextRenderer) renderEmbed(embed discord.Embed, m *discord.Message, s st
 	// If we have a thumbnail, then write one.
 	if embed.Thumbnail != nil {
 		r.append(EmbedThumbnail(r.buf.Len(), *embed.Thumbnail))
-		r.buf.WriteByte('\n')
+		r.ensureBreak()
 	}
 
 	if embed.Description != "" {
@@ -75,12 +75,12 @@ func (r *TextRenderer) renderEmbed(embed discord.Embed, m *discord.Message, s st
 		// Join the created state.
 		r.join(desc)
 		// Write a new line.
-		r.buf.WriteByte('\n')
+		r.ensureBreak()
 	}
 
 	if len(embed.Fields) > 0 {
-		// Pad another new line.
-		r.buf.WriteByte('\n')
+		// Pad two new lines.
+		r.startBlockN(2)
 
 		// Write fields indented once.
 		for _, field := range embed.Fields {
@@ -95,7 +95,7 @@ func (r *TextRenderer) renderEmbed(embed discord.Embed, m *discord.Message, s st
 		}
 
 		r.buf.WriteString(f.Text)
-		r.buf.WriteByte('\n')
+		r.ensureBreak()
 	}
 
 	if embed.Timestamp.Valid() {
@@ -104,13 +104,13 @@ func (r *TextRenderer) renderEmbed(embed discord.Embed, m *discord.Message, s st
 		}
 
 		r.buf.WriteString(embed.Timestamp.Format(time.RFC1123))
-		r.buf.WriteByte('\n')
+		r.ensureBreak()
 	}
 
 	// Write an image if there's one.
 	if embed.Image != nil {
 		r.append(EmbedImage(r.buf.Len(), *embed.Image))
-		r.buf.WriteByte('\n')
+		r.ensureBreak()
 	}
 }
 
@@ -120,8 +120,8 @@ func (r *TextRenderer) renderAttachments(attachments []discord.Attachment) {
 		return
 	}
 
-	// Start a (small) new block before rendering attachments.
-	r.startBlockN(1)
+	// Start a (small)new block before rendering attachments.
+	r.ensureBreak()
 
 	// Render all attachments. Newline delimited.
 	for i, attachment := range attachments {
