@@ -17,7 +17,7 @@ func (r *TextRenderer) blockquote(n *ast.Blockquote, enter bool) ast.WalkStatus 
 		defer r.endBlock()
 
 		// Create a segment.
-		var seg = BlockquoteSegment{start: r.i()}
+		var seg = BlockquoteSegment{start: r.buf.Len()}
 
 		// A blockquote contains a paragraph each line. Because Discord.
 		for child := n.FirstChild(); child != nil; child = child.NextSibling() {
@@ -34,7 +34,7 @@ func (r *TextRenderer) blockquote(n *ast.Blockquote, enter bool) ast.WalkStatus 
 		}
 
 		// Write the end of the segment.
-		seg.end = r.i()
+		seg.end = r.buf.Len()
 		r.append(seg)
 	}
 

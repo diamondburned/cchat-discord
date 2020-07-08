@@ -23,7 +23,7 @@ var _ text.Imager = (*EmojiSegment)(nil)
 func (r *TextRenderer) emoji(n *md.Emoji, enter bool) ast.WalkStatus {
 	if enter {
 		r.append(EmojiSegment{
-			start:    r.i(),
+			start:    r.buf.Len(),
 			name:     n.Name,
 			large:    n.Large,
 			emojiURL: n.EmojiURL() + "&size=64",

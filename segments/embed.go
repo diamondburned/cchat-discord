@@ -28,7 +28,7 @@ func (r *TextRenderer) renderEmbeds(embeds []discord.Embed, m *discord.Message, 
 func (r *TextRenderer) renderEmbed(embed discord.Embed, m *discord.Message, s state.Store) {
 	if a := embed.Author; a != nil && a.Name != "" {
 		if a.ProxyIcon != "" {
-			r.append(EmbedAuthor(r.i(), *a))
+			r.append(EmbedAuthor(r.buf.Len(), *a))
 			r.buf.WriteByte(' ')
 		}
 
@@ -55,6 +55,12 @@ func (r *TextRenderer) renderEmbed(embed discord.Embed, m *discord.Message, s st
 				embed.URL,
 			})
 		}
+	}
+
+	// If we have a thumbnail, then write one.
+	if embed.Thumbnail != nil {
+		r.append(EmbedThumbnail(r.buf.Len(), *embed.Thumbnail))
+		r.buf.WriteByte('\n')
 	}
 
 	if embed.Description != "" {
@@ -84,7 +90,7 @@ func (r *TextRenderer) renderEmbed(embed discord.Embed, m *discord.Message, s st
 
 	if f := embed.Footer; f != nil && f.Text != "" {
 		if f.ProxyIcon != "" {
-			r.append(EmbedFooter(r.i(), *f))
+			r.append(EmbedFooter(r.buf.Len(), *f))
 			r.buf.WriteByte(' ')
 		}
 
@@ -100,6 +106,12 @@ func (r *TextRenderer) renderEmbed(embed discord.Embed, m *discord.Message, s st
 		r.buf.WriteString(embed.Timestamp.Format(time.RFC1123))
 		r.buf.WriteByte('\n')
 	}
+
+	// Write an image if there's one.
+	if embed.Image != nil {
+		r.append(EmbedImage(r.buf.Len(), *embed.Image))
+		r.buf.WriteByte('\n')
+	}
 }
 
 func (r *TextRenderer) renderAttachments(attachments []discord.Attachment) {
@@ -108,8 +120,8 @@ func (r *TextRenderer) renderAttachments(attachments []discord.Attachment) {
 		return
 	}
 
-	// Start a new block before rendering attachments.
-	r.startBlock()
+	// Start a (small) new block before rendering attachments.
+	r.startBlockN(1)
 
 	// Render all attachments. Newline delimited.
 	for i, attachment := range attachments {
@@ -123,7 +135,7 @@ func (r *TextRenderer) renderAttachments(attachments []discord.Attachment) {
 
 func (r *TextRenderer) renderAttachment(a discord.Attachment) {
 	if urlutils.ExtIs(a.Proxy, imageExts) {
-		r.append(EmbedAttachment(r.i(), a))
+		r.append(EmbedAttachment(r.buf.Len(), a))
 		return
 	}
 
@@ -187,23 +199,23 @@ type ImageSegment struct {
 	text  string
 }
 
-func EmbedImage(start int, i discord.EmbedImage, text string) ImageSegment {
+func EmbedImage(start int, i discord.EmbedImage) ImageSegment {
 	return ImageSegment{
 		start: start,
 		url:   i.Proxy,
 		w:     int(i.Width),
 		h:     int(i.Height),
-		text:  text,
+		text:  fmt.Sprintf("Image (%s)", urlutils.Name(i.URL)),
 	}
 }
 
-func EmbedThumbnail(start int, t discord.EmbedThumbnail, text string) ImageSegment {
+func EmbedThumbnail(start int, t discord.EmbedThumbnail) ImageSegment {
 	return ImageSegment{
 		start: start,
 		url:   t.Proxy,
 		w:     int(t.Width),
 		h:     int(t.Height),
-		text:  text,
+		text:  fmt.Sprintf("Thumbnail (%s)", urlutils.Name(t.URL)),
 	}
 }
 

@@ -7,6 +7,11 @@ import (
 	"strings"
 )
 
+// AvatarURL wraps the URL with URL queries for the avatar.
+func AvatarURL(URL string) string {
+	return Sized(URL, 64)
+}
+
 // Sized wraps the URL with the size query.
 func Sized(URL string, size int) string {
 	u, err := url.Parse(URL)
@@ -29,6 +34,14 @@ func Ext(URL string) string {
 	}
 
 	return strings.ToLower(path.Ext(u.Path))
+}
+
+func Name(URL string) string {
+	u, err := url.Parse(URL)
+	if err != nil {
+		return URL
+	}
+	return path.Base(u.Path)
 }
 
 func ExtIs(URL string, exts []string) bool {

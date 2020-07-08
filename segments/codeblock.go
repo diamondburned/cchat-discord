@@ -20,7 +20,7 @@ func (r *TextRenderer) codeblock(n *ast.FencedCodeBlock, enter bool) ast.WalkSta
 
 		// Create a segment.
 		seg := CodeblockSegment{
-			start:    r.i(),
+			start:    r.buf.Len(),
 			language: string(n.Language(r.src)),
 		}
 
@@ -33,7 +33,7 @@ func (r *TextRenderer) codeblock(n *ast.FencedCodeBlock, enter bool) ast.WalkSta
 		}
 
 		// Close the segment.
-		seg.end = r.i()
+		seg.end = r.buf.Len()
 		r.append(seg)
 
 		// Close the block.

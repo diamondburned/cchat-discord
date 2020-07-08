@@ -16,9 +16,13 @@ func ParseMessage(m *discord.Message, s state.Store) text.Rich {
 	var node = md.ParseWithMessage(content, s, m, true)
 
 	r := NewTextReader(content, node)
+	// Register the needed states for some renderers.
+	r.WithState(m, s)
+	// Render the main message body.
 	r.walk(node)
-	r.renderEmbeds(m.Embeds, m, s)
+	// Render the extra bits.
 	r.renderAttachments(m.Attachments)
+	r.renderEmbeds(m.Embeds, m, s)
 
 	return text.Rich{
 		Content:  r.String(),
@@ -51,6 +55,10 @@ type TextRenderer struct {
 	src  []byte
 	segs []text.Segment
 	inls inlineState
+
+	// these fields can be nil
+	msg   *discord.Message
+	store state.Store
 }
 
 func NewTextReader(src []byte, node ast.Node) TextRenderer {
@@ -62,6 +70,11 @@ func NewTextReader(src []byte, node ast.Node) TextRenderer {
 		buf:  buf,
 		segs: make([]text.Segment, 0, node.ChildCount()),
 	}
+}
+
+func (r *TextRenderer) WithState(m *discord.Message, s state.Store) {
+	r.msg = m
+	r.store = s
 }
 
 // String returns a stringified version of Bytes().
@@ -97,41 +110,34 @@ func (r *TextRenderer) Bytes() []byte {
 	return trbuf
 }
 
-// i returns the current cursor position.
-func (r *TextRenderer) i() int {
-	return r.buf.Len()
-}
-
 func (r *TextRenderer) writeStringf(f string, v ...interface{}) (start, end int) {
 	return r.writeString(fmt.Sprintf(f, v...))
 }
 
 func (r *TextRenderer) writeString(s string) (start, end int) {
-	start = r.i()
-	r.buf.WriteString(s)
-	end = r.i()
-	return
+	return writestringbuf(r.buf, s)
 }
 
 func (r *TextRenderer) write(b []byte) (start, end int) {
-	start = r.i()
-	r.buf.Write(b)
-	end = r.i()
-	return
+	return writebuf(r.buf, b)
 }
 
 // startBlock guarantees enough indentation to start a new block.
 func (r *TextRenderer) startBlock() {
+	r.startBlockN(2)
+}
+
+// startBlockN allows a custom block level.
+func (r *TextRenderer) startBlockN(n int) {
 	var maxNewlines = 0
 
 	// Peek twice. If the last character is already a new line or we're only at
 	// the start of line (length 0), then don't pad.
 	if r.buf.Len() > 0 {
-		if r.peekLast(0) != '\n' {
-			maxNewlines++
-		}
-		if r.peekLast(1) != '\n' {
-			maxNewlines++
+		for i := 0; i < n; i++ {
+			if r.peekLast(i) != '\n' {
+				maxNewlines++
+			}
 		}
 	}
 
@@ -217,4 +223,24 @@ func (r *TextRenderer) renderNode(n ast.Node, enter bool) (ast.WalkStatus, error
 	}
 
 	return ast.WalkContinue, nil
+}
+
+// helper global functions
+
+func writebuf(w *bytes.Buffer, b []byte) (start, end int) {
+	start = w.Len()
+	w.Write(b)
+	end = w.Len()
+	return start, end
+}
+
+func writestringbuf(w *bytes.Buffer, b string) (start, end int) {
+	start = w.Len()
+	w.WriteString(b)
+	end = w.Len()
+	return start, end
+}
+
+func segmentadd(r *text.Rich, seg ...text.Segment) {
+	r.Segments = append(r.Segments, seg...)
 }

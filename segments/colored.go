@@ -3,8 +3,9 @@ package segments
 import "github.com/diamondburned/cchat/text"
 
 type Colored struct {
-	strlen int
-	color  uint32
+	start int
+	end   int
+	color uint32
 }
 
 var (
@@ -13,11 +14,15 @@ var (
 )
 
 func NewColored(strlen int, color uint32) Colored {
-	return Colored{strlen, color}
+	return Colored{0, strlen, color}
+}
+
+func NewColoredSegment(start, end int, color uint32) Colored {
+	return Colored{start, end, color}
 }
 
 func (color Colored) Bounds() (start, end int) {
-	return 0, color.strlen
+	return color.start, color.end
 }
 
 func (color Colored) Color() uint32 {

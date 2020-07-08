@@ -54,7 +54,7 @@ func (m messageHeader) Time() time.Time {
 
 // AvatarURL wraps the URL with URL queries for the avatar.
 func AvatarURL(URL string) string {
-	return urlutils.Sized(URL, 64)
+	return urlutils.AvatarURL(URL)
 }
 
 type Author struct {

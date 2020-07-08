@@ -71,7 +71,7 @@ func (r *TextRenderer) inline(n *md.Inline, enter bool) ast.WalkStatus {
 
 	// Pop the last segment if it's not empty.
 	if !r.inls.empty() {
-		r.inls.end = r.i()
+		r.inls.end = r.buf.Len()
 
 		// Only use this section if the length is not zero.
 		if r.inls.start != r.inls.end {
@@ -86,7 +86,7 @@ func (r *TextRenderer) inline(n *md.Inline, enter bool) ast.WalkStatus {
 	}
 
 	// Update the start pointer of the current segment.
-	r.inls.start = r.i()
+	r.inls.start = r.buf.Len()
 
 	return ast.WalkContinue
 }
