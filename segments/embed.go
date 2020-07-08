@@ -7,6 +7,7 @@ import (
 	"github.com/diamondburned/arikawa/discord"
 	"github.com/diamondburned/arikawa/state"
 	"github.com/diamondburned/cchat-discord/urlutils"
+	"github.com/diamondburned/cchat/text"
 	"github.com/diamondburned/ningen/md"
 	"github.com/dustin/go-humanize"
 )
@@ -47,6 +48,13 @@ func (r *TextRenderer) renderEmbed(embed discord.Embed, m *discord.Message, s st
 	if embed.Title != "" {
 		start, end := r.writeString(embed.Title)
 		r.ensureBreak()
+
+		// Make the title bold.
+		r.append(InlineSegment{
+			start:      start,
+			end:        end,
+			attributes: text.AttrBold,
+		})
 
 		if embed.URL != "" {
 			r.append(LinkSegment{
