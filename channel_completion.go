@@ -17,17 +17,19 @@ func completionUserEntry(s state.Store, u discord.User, g *discord.Guild) cchat.
 		m, err := s.Member(g.ID, u.ID)
 		if err == nil {
 			return cchat.CompletionEntry{
-				Raw:     u.Mention(),
-				Text:    RenderMemberName(*m, *g),
-				IconURL: u.AvatarURL(),
+				Raw:       u.Mention(),
+				Text:      RenderMemberName(*m, *g),
+				Secondary: text.Rich{Content: u.Username + "#" + u.Discriminator},
+				IconURL:   u.AvatarURL(),
 			}
 		}
 	}
 
 	return cchat.CompletionEntry{
-		Raw:     u.Mention(),
-		Text:    text.Rich{Content: u.Username},
-		IconURL: u.AvatarURL(),
+		Raw:       u.Mention(),
+		Text:      text.Rich{Content: u.Username},
+		Secondary: text.Rich{Content: u.Username + "#" + u.Discriminator},
+		IconURL:   u.AvatarURL(),
 	}
 }
 
@@ -73,9 +75,10 @@ func (ch *Channel) completeMentions(word string) (entries []cchat.CompletionEntr
 		for _, u := range c.DMRecipients {
 			if startsWith(match, u.Username) {
 				entries = append(entries, cchat.CompletionEntry{
-					Raw:     u.Mention(),
-					Text:    text.Rich{Content: u.Username},
-					IconURL: u.AvatarURL(),
+					Raw:       u.Mention(),
+					Text:      text.Rich{Content: u.Username},
+					Secondary: text.Rich{Content: u.Username + "#" + u.Discriminator},
+					IconURL:   u.AvatarURL(),
 				})
 				if len(entries) >= MaxCompletion {
 					return
@@ -104,9 +107,10 @@ func (ch *Channel) completeMentions(word string) (entries []cchat.CompletionEntr
 	for _, mem := range m {
 		if startsWith(match, mem.User.Username, mem.Nick) {
 			entries = append(entries, cchat.CompletionEntry{
-				Raw:     mem.User.Mention(),
-				Text:    RenderMemberName(mem, *g),
-				IconURL: mem.User.AvatarURL(),
+				Raw:       mem.User.Mention(),
+				Text:      RenderMemberName(mem, *g),
+				Secondary: text.Rich{Content: mem.User.Username + "#" + mem.User.Discriminator},
+				IconURL:   mem.User.AvatarURL(),
 			})
 			if len(entries) >= MaxCompletion {
 				return
@@ -178,10 +182,11 @@ func (ch *Channel) completeEmojis(word string) (entries []cchat.CompletionEntry)
 		for _, emoji := range guild.Emojis {
 			if startsWith(match, emoji.Name) {
 				entries = append(entries, cchat.CompletionEntry{
-					Raw:     emoji.String(),
-					Text:    text.Rich{Content: ":" + emoji.Name + ":"},
-					IconURL: urlutils.Sized(emoji.EmojiURL(), 32), // small
-					Image:   true,
+					Raw:       emoji.String(),
+					Text:      text.Rich{Content: ":" + emoji.Name + ":"},
+					Secondary: text.Rich{Content: guild.Name},
+					IconURL:   urlutils.Sized(emoji.EmojiURL(), 32), // small
+					Image:     true,
 				})
 				if len(entries) >= MaxCompletion {
 					return

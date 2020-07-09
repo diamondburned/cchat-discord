@@ -55,6 +55,7 @@ type TextRenderer struct {
 	src  []byte
 	segs []text.Segment
 	inls inlineState
+	lnks linkState
 
 	// these fields can be nil
 	msg   *discord.Message

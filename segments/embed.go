@@ -17,10 +17,12 @@ var imageExts = []string{".jpg", ".jpeg", ".png", ".webp", ".gif"}
 func (r *TextRenderer) renderEmbeds(embeds []discord.Embed, m *discord.Message, s state.Store) {
 	for _, embed := range embeds {
 		r.startBlock()
-		r.buf.WriteString("---\n")
+		r.buf.WriteString("---")
+		r.ensureBreak()
 
 		r.renderEmbed(embed, m, s)
 
+		r.ensureBreak()
 		r.buf.WriteString("---") // render prepends newline already
 		r.endBlock()
 	}
