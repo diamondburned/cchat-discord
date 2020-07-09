@@ -71,14 +71,15 @@ type Channel struct {
 }
 
 var (
-	_ cchat.Server                       = (*Channel)(nil)
-	_ cchat.ServerMessage                = (*Channel)(nil)
-	_ cchat.ServerMessageSender          = (*Channel)(nil)
-	_ cchat.ServerMessageSendCompleter   = (*Channel)(nil)
-	_ cchat.ServerNickname               = (*Channel)(nil)
-	_ cchat.ServerMessageEditor          = (*Channel)(nil)
-	_ cchat.ServerMessageActioner        = (*Channel)(nil)
-	_ cchat.ServerMessageTypingIndicator = (*Channel)(nil)
+	_ cchat.Server                        = (*Channel)(nil)
+	_ cchat.ServerMessage                 = (*Channel)(nil)
+	_ cchat.ServerMessageSender           = (*Channel)(nil)
+	_ cchat.ServerMessageAttachmentSender = (*Channel)(nil)
+	_ cchat.ServerMessageSendCompleter    = (*Channel)(nil)
+	_ cchat.ServerNickname                = (*Channel)(nil)
+	_ cchat.ServerMessageEditor           = (*Channel)(nil)
+	_ cchat.ServerMessageActioner         = (*Channel)(nil)
+	_ cchat.ServerMessageTypingIndicator  = (*Channel)(nil)
 )
 
 func NewChannel(s *Session, ch discord.Channel) *Channel {
@@ -272,9 +273,30 @@ func (ch *Channel) SendMessage(msg cchat.SendableMessage) error {
 	if noncer, ok := msg.(cchat.MessageNonce); ok {
 		send.Nonce = noncer.Nonce()
 	}
+	if attcher, ok := msg.(cchat.SendableMessageAttachments); ok {
+		send.Files = addAttachments(attcher.Attachments())
+	}
 
 	_, err := ch.session.SendMessageComplex(ch.id, send)
 	return err
+}
+
+func (ch *Channel) SendAttachments(atts []cchat.MessageAttachment) error {
+	_, err := ch.session.SendMessageComplex(ch.id, api.SendMessageData{
+		Files: addAttachments(atts),
+	})
+	return err
+}
+
+func addAttachments(atts []cchat.MessageAttachment) []api.SendMessageFile {
+	var files = make([]api.SendMessageFile, len(atts))
+	for i, a := range atts {
+		files[i] = api.SendMessageFile{
+			Name:   a.Name,
+			Reader: a,
+		}
+	}
+	return files
 }
 
 // MessageEditable returns true if the given message ID belongs to the current
