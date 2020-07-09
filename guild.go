@@ -158,8 +158,14 @@ func (g *Guild) Servers(container cchat.ServersContainer) error {
 	// Only get top-level channels (those with category ID being null).
 	var toplevels = filterAccessible(g.session, filterCategory(c, discord.NullSnowflake))
 
-	sort.Slice(toplevels, func(i, j int) bool {
+	// Sort so that positions are correct.
+	sort.SliceStable(toplevels, func(i, j int) bool {
 		return toplevels[i].Position < toplevels[j].Position
+	})
+
+	// Sort so that channels are before categories.
+	sort.SliceStable(toplevels, func(i, _ int) bool {
+		return toplevels[i].Type != discord.GuildCategory
 	})
 
 	var chs = make([]cchat.Server, 0, len(toplevels))

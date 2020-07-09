@@ -121,10 +121,19 @@ type Message struct {
 	mentioned bool
 }
 
-func NewMessageUpdateContent(msg discord.Message) Message {
+func NewMessageUpdateContent(msg discord.Message, s *Session) Message {
+	// Check if content is empty.
+	if msg.Content == "" {
+		// Then grab the content from the state.
+		m, err := s.Store.Message(msg.ChannelID, msg.ID)
+		if err == nil {
+			msg.Content = m.Content
+		}
+	}
+
 	return Message{
 		messageHeader: newHeader(msg),
-		content:       text.Rich{Content: msg.Content},
+		content:       segments.ParseMessage(&msg, s.Store),
 	}
 }
 

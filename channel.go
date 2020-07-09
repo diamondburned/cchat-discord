@@ -254,7 +254,7 @@ func (ch *Channel) JoinServer(ctx context.Context, ct cchat.MessagesContainer) (
 		ch.session.AddHandler(func(m *gateway.MessageUpdateEvent) {
 			// If the updated content is empty. TODO: add embed support.
 			if m.ChannelID == ch.id && m.Content != "" {
-				ct.UpdateMessage(NewMessageUpdateContent(m.Message))
+				ct.UpdateMessage(NewMessageUpdateContent(m.Message, ch.session))
 			}
 		}),
 		ch.session.AddHandler(func(m *gateway.MessageDeleteEvent) {
