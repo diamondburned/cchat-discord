@@ -2,6 +2,7 @@ package discord
 
 import (
 	"context"
+	"sort"
 	"time"
 
 	"github.com/diamondburned/arikawa/api"
@@ -239,6 +240,12 @@ func (ch *Channel) JoinServer(ctx context.Context, ct cchat.MessagesContainer) (
 			return NewDirectMessage(m, ch.session)
 		}
 	}
+
+	// Sort messages chronologically using the ID so that the oldest messages
+	// (ones with the smallest snowflake) is in front.
+	sort.Slice(m, func(i, j int) bool {
+		return m[i].ID < m[j].ID
+	})
 
 	// Iterate from the earliest messages to the latest messages.
 	for i := len(m) - 1; i >= 0; i-- {
