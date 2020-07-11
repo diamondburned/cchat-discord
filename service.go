@@ -32,7 +32,8 @@ func (Service) Name() text.Rich {
 }
 
 func (Service) Icon(ctx context.Context, iconer cchat.IconContainer) (func(), error) {
-	iconer.SetIcon("https://discord.com/assets/2c21aeda16de354ba5334551a883b481.png")
+	iconer.SetIcon("https://raw.githubusercontent.com/" +
+		"diamondburned/cchat-discord/himearikawa/discord_logo.png")
 	return func() {}, nil
 }
 
