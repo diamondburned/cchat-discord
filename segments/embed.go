@@ -70,7 +70,8 @@ func (r *TextRenderer) renderEmbed(embed discord.Embed, m *discord.Message, s st
 	// If we have a thumbnail, then write one.
 	if embed.Thumbnail != nil {
 		r.append(EmbedThumbnail(r.buf.Len(), *embed.Thumbnail))
-		r.ensureBreak()
+		// Guarantee 2 lines because thumbnail needs its own.
+		r.startBlockN(2)
 	}
 
 	if embed.Description != "" {
@@ -120,7 +121,9 @@ func (r *TextRenderer) renderEmbed(embed discord.Embed, m *discord.Message, s st
 	// Write an image if there's one.
 	if embed.Image != nil {
 		r.append(EmbedImage(r.buf.Len(), *embed.Image))
-		r.ensureBreak()
+		// Images take up its own empty line, so we should guarantee 2 empty
+		// lines.
+		r.startBlockN(2)
 	}
 }
 

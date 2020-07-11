@@ -133,8 +133,11 @@ func (s *Session) Icon(ctx context.Context, iconer cchat.IconContainer) (func(),
 	// Thanks to arikawa, AvatarURL is never empty.
 	iconer.SetIcon(AvatarURL(u.AvatarURL()))
 
-	return s.AddHandler(func(u *gateway.UserUpdateEvent) {
-		iconer.SetIcon(AvatarURL(u.AvatarURL()))
+	return s.AddHandler(func(*gateway.UserUpdateEvent) {
+		// Bypass the event and use the state cache.
+		if u, err := s.Store.Me(); err == nil {
+			iconer.SetIcon(AvatarURL(u.AvatarURL()))
+		}
 	}), nil
 }
 
@@ -166,7 +169,7 @@ func (s *Session) Servers(container cchat.ServersContainer) error {
 			case len(folder.GuildIDs) == 1:
 				g, err := NewGuildFromID(s, folder.GuildIDs[0])
 				if err != nil {
-					return errors.Wrap(err, "Failed to get guild in folder")
+					continue
 				}
 				toplevels = append(toplevels, g)
 			}
@@ -182,7 +185,7 @@ func (s *Session) Servers(container cchat.ServersContainer) error {
 		for _, id := range s.Ready.Settings.GuildPositions {
 			g, err := NewGuildFromID(s, id)
 			if err != nil {
-				return errors.Wrap(err, "Failed to get guild in position")
+				continue
 			}
 			guilds = append(guilds, g)
 		}

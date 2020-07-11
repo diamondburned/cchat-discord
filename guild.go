@@ -69,7 +69,7 @@ func (gf *GuildFolder) Servers(container cchat.ServersContainer) error {
 	for i, id := range gf.GuildIDs {
 		g, err := gf.session.Guild(id)
 		if err != nil {
-			return errors.Wrap(err, "Failed to get guild ID "+id.String())
+			continue
 		}
 
 		servers[i] = NewGuild(gf.session, g)
