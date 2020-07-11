@@ -248,8 +248,8 @@ func (ch *Channel) JoinServer(ctx context.Context, ct cchat.MessagesContainer) (
 	})
 
 	// Iterate from the earliest messages to the latest messages.
-	for i := len(m) - 1; i >= 0; i-- {
-		ct.CreateMessage(constructor(m[i]))
+	for _, m := range m {
+		ct.CreateMessage(constructor(m))
 	}
 
 	// Bind the handler.
