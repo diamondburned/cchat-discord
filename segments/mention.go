@@ -3,11 +3,10 @@ package segments
 import (
 	"bytes"
 	"fmt"
-	"sort"
 	"strings"
 
 	"github.com/diamondburned/arikawa/discord"
-	"github.com/diamondburned/cchat-discord/urlutils"
+	"github.com/diamondburned/arikawa/state"
 	"github.com/diamondburned/cchat/text"
 	"github.com/diamondburned/ningen/md"
 	"github.com/yuin/goldmark/ast"
@@ -15,47 +14,12 @@ import (
 
 const blurple = 0x7289DA
 
-type roleInfo struct {
-	name     string
-	color    uint32
-	position int // used for sorting
-}
-
-func (r *TextRenderer) userRoles(user *discord.GuildUser) []roleInfo {
-	if user.Member == nil || r.msg == nil || !r.msg.GuildID.Valid() {
-		return nil
-	}
-
-	var roles = make([]roleInfo, 0, len(user.Member.RoleIDs))
-
-	for _, roleID := range user.Member.RoleIDs {
-		r, err := r.store.Role(r.msg.GuildID, roleID)
-		if err != nil {
-			continue
-		}
-
-		roles = append(roles, roleInfo{
-			name:     r.Name,
-			color:    r.Color.Uint32(), // default 0
-			position: r.Position,
-		})
-	}
-
-	// Sort the roles so the first roles stay in front. We need to do this to
-	// both render properly and to get the right role color.
-	sort.Slice(roles, func(i, j int) bool {
-		return roles[i].position < roles[j].position
-	})
-
-	return roles
-}
-
 type MentionSegment struct {
 	start, end int
 	*md.Mention
 
-	// only non-nil if GuildUser is not nil and is in a guild.
-	roles []roleInfo
+	store state.Store
+	guild discord.Snowflake
 }
 
 var (
@@ -66,14 +30,17 @@ var (
 
 func (r *TextRenderer) mention(n *md.Mention, enter bool) ast.WalkStatus {
 	if enter {
-		var seg = MentionSegment{Mention: n}
+		var seg = MentionSegment{
+			Mention: n,
+			store:   r.store,
+			guild:   r.msg.GuildID,
+		}
 
 		switch {
 		case n.Channel != nil:
 			seg.start, seg.end = r.writeString("#" + n.Channel.Name)
 		case n.GuildUser != nil:
 			seg.start, seg.end = r.writeString("@" + n.GuildUser.Username)
-			seg.roles = r.userRoles(n.GuildUser) // get roles as well
 		case n.GuildRole != nil:
 			seg.start, seg.end = r.writeString("@" + n.GuildRole.Name)
 		default:
@@ -96,12 +63,14 @@ func (m MentionSegment) Bounds() (start, end int) {
 func (m MentionSegment) Color() uint32 {
 	// Try digging through what we have for a color.
 	switch {
-	case len(m.roles) > 0:
-		for _, role := range m.roles {
-			if role.color > 0 {
-				return role.color
-			}
+	case m.GuildUser != nil && m.GuildUser.Member != nil:
+		g, err := m.store.Guild(m.guild)
+		if err != nil {
+			return blurple
 		}
+
+		return discord.MemberColor(*g, *m.GuildUser.Member).Uint32()
+
 	case m.GuildRole != nil && m.GuildRole.Color > 0:
 		return m.GuildRole.Color.Uint32()
 	}
@@ -148,14 +117,22 @@ func (m MentionSegment) userInfo() text.Rich {
 	var segment text.Rich
 
 	// Make a large avatar if there's one.
-	if m.GuildUser != nil {
-		segment.Segments = append(segment.Segments, AvatarSegment{
+	if m.GuildUser.Avatar != "" {
+		segmentadd(&segment, AvatarSegment{
 			start: 0,
-			url:   urlutils.AvatarURL(m.GuildUser.AvatarURL()),
+			url:   m.GuildUser.AvatarURL(), // full URL
 			text:  "Avatar",
+			size:  72, // large
 		})
 		// Space out.
 		content.WriteByte(' ')
+	}
+
+	// We should have a member if there's nil. Sometimes when the members aren't
+	// prefetched, the markdown parser can miss them. We can check this again.
+	if m.GuildUser.Member == nil && m.guild.Valid() {
+		// Best effort; fine if it's nil.
+		m.GuildUser.Member, _ = m.store.Member(m.guild, m.GuildUser.ID)
 	}
 
 	// Write the nickname if there's one; else, write the username only.
@@ -180,18 +157,23 @@ func (m MentionSegment) userInfo() text.Rich {
 		content.WriteString(m.GuildUser.Discriminator)
 	}
 
-	// Write roles, if any.
-	if len(m.roles) > 0 {
+	// Write extra information if any.
+	if m.GuildUser.Member != nil && len(m.GuildUser.Member.RoleIDs) > 0 {
 		// Write a prepended new line, as role writes will always prepend a new
 		// line. This is to prevent a trailing new line.
-		content.WriteString("\n---\nRoles")
+		content.WriteString("\n\n--- Roles ---")
 
-		for _, role := range m.roles {
+		for _, id := range m.GuildUser.Member.RoleIDs {
+			r, err := m.store.Role(m.guild, id)
+			if err != nil {
+				continue
+			}
+
 			// Prepend a new line before each item.
 			content.WriteByte('\n')
 			// Write exactly the role name, then grab the segment and color it.
-			start, end := writestringbuf(&content, role.name)
-			segmentadd(&segment, NewColoredSegment(start, end, role.color))
+			start, end := writestringbuf(&content, "@"+r.Name)
+			segmentadd(&segment, NewColoredSegment(start, end, r.Color.Uint32()))
 		}
 	}
 

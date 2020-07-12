@@ -168,6 +168,7 @@ type AvatarSegment struct {
 	start int
 	url   string
 	text  string
+	size  int
 }
 
 func EmbedAuthor(start int, a discord.EmbedAuthor) AvatarSegment {
@@ -198,6 +199,9 @@ func (a AvatarSegment) Avatar() (url string) {
 
 // AvatarSize returns the size of a small emoji.
 func (a AvatarSegment) AvatarSize() int {
+	if a.size > 0 {
+		return a.size
+	}
 	return InlineEmojiSize
 }
 

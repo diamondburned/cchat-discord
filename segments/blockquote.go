@@ -34,8 +34,15 @@ func (r *TextRenderer) blockquote(n *ast.Blockquote, enter bool) ast.WalkStatus 
 			})
 		}
 
-		// Write the end of the segment.
-		seg.end = r.buf.Len()
+		// Search until the last non-whitespace.
+		var i = r.buf.Len() - 1
+		for bytes := r.buf.Bytes(); i > 0 && isSpace(bytes[i]); i-- {
+		}
+
+		// The ending will have a trailing character that's not covered, so
+		// we'll need to do that ourselves.
+		// End the codeblock at that non-whitespace location.
+		seg.end = i + 1
 		r.append(seg)
 	}
 
@@ -47,3 +54,9 @@ func (b BlockquoteSegment) Bounds() (start, end int) {
 }
 
 func (b BlockquoteSegment) Quote() {}
+
+// isSpace is a quick function that matches if the byte is a space, a new line
+// or a return carriage.
+func isSpace(b byte) bool {
+	return b == ' ' || b == '\n' || b == '\r'
+}
