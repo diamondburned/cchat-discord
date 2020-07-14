@@ -69,7 +69,9 @@ func (m MentionSegment) Color() uint32 {
 			return blurple
 		}
 
-		return discord.MemberColor(*g, *m.GuildUser.Member).Uint32()
+		if color := discord.MemberColor(*g, *m.GuildUser.Member); color > 0 {
+			return color.Uint32()
+		}
 
 	case m.GuildRole != nil && m.GuildRole.Color > 0:
 		return m.GuildRole.Color.Uint32()
