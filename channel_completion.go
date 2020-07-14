@@ -61,7 +61,7 @@ func (ch *Channel) completeMentions(word string) (entries []cchat.CompletionEntr
 		return
 	}
 
-	// Lower-case everything for a case-insensitive match. startsWith() should
+	// Lower-case everything for a case-insensitive match. contains() should
 	// do the rest.
 	var match = strings.ToLower(word)
 
@@ -73,7 +73,7 @@ func (ch *Channel) completeMentions(word string) (entries []cchat.CompletionEntr
 		}
 
 		for _, u := range c.DMRecipients {
-			if startsWith(match, u.Username) {
+			if contains(match, u.Username) {
 				entries = append(entries, cchat.CompletionEntry{
 					Raw:       u.Mention(),
 					Text:      text.Rich{Content: u.Username},
@@ -105,7 +105,7 @@ func (ch *Channel) completeMentions(word string) (entries []cchat.CompletionEntr
 	}
 
 	for _, mem := range m {
-		if startsWith(match, mem.User.Username, mem.Nick) {
+		if contains(match, mem.User.Username, mem.Nick) {
 			entries = append(entries, cchat.CompletionEntry{
 				Raw:       mem.User.Mention(),
 				Text:      RenderMemberName(mem, *g),
@@ -140,7 +140,7 @@ func (ch *Channel) completeChannels(word string) (entries []cchat.CompletionEntr
 	var match = strings.ToLower(word)
 
 	for _, channel := range c {
-		if !startsWith(match, channel.Name) {
+		if !contains(match, channel.Name) {
 			continue
 		}
 
@@ -180,7 +180,7 @@ func (ch *Channel) completeEmojis(word string) (entries []cchat.CompletionEntry)
 
 	for _, guild := range e {
 		for _, emoji := range guild.Emojis {
-			if startsWith(match, emoji.Name) {
+			if contains(match, emoji.Name) {
 				entries = append(entries, cchat.CompletionEntry{
 					Raw:       emoji.String(),
 					Text:      text.Rich{Content: ":" + emoji.Name + ":"},
@@ -198,9 +198,9 @@ func (ch *Channel) completeEmojis(word string) (entries []cchat.CompletionEntry)
 	return
 }
 
-func startsWith(contains string, strs ...string) bool {
+func contains(contains string, strs ...string) bool {
 	for _, str := range strs {
-		if strings.HasPrefix(strings.ToLower(str), contains) {
+		if strings.Contains(strings.ToLower(str), contains) {
 			return true
 		}
 	}
