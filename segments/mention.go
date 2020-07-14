@@ -60,7 +60,7 @@ func (m MentionSegment) Bounds() (start, end int) {
 
 // Color tries to return the color of the mention segment, or it returns the
 // usual blurple if none.
-func (m MentionSegment) Color() uint32 {
+func (m MentionSegment) Color() (color uint32) {
 	// Try digging through what we have for a color.
 	switch {
 	case m.GuildUser != nil && m.GuildUser.Member != nil:
@@ -69,12 +69,14 @@ func (m MentionSegment) Color() uint32 {
 			return blurple
 		}
 
-		if color := discord.MemberColor(*g, *m.GuildUser.Member); color > 0 {
-			return color.Uint32()
-		}
+		color = discord.MemberColor(*g, *m.GuildUser.Member).Uint32()
 
 	case m.GuildRole != nil && m.GuildRole.Color > 0:
-		return m.GuildRole.Color.Uint32()
+		color = m.GuildRole.Color.Uint32()
+	}
+
+	if color > 0 {
+		return
 	}
 
 	return blurple
