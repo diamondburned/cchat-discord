@@ -100,7 +100,7 @@ func (ch *Channel) completeMentions(word string) (entries []cchat.CompletionEntr
 	// If we couldn't find any members, then we can request Discord to
 	// search for them.
 	if len(m) == 0 {
-		ch.session.Members.SearchMember(ch.guildID, word)
+		ch.session.MemberState.SearchMember(ch.guildID, word)
 		return
 	}
 
@@ -171,7 +171,7 @@ func (ch *Channel) completeEmojis(word string) (entries []cchat.CompletionEntry)
 		return
 	}
 
-	e, err := ch.session.Emoji.Get(ch.guildID)
+	e, err := ch.session.EmojiState.Get(ch.guildID)
 	if err != nil {
 		return
 	}

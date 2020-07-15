@@ -100,6 +100,8 @@ func NewSession(s *state.State) (*Session, error) {
 		return nil, errors.Wrap(err, "Failed to create a state wrapper")
 	}
 
+	var _ state.Store = s
+
 	if err := s.Open(); err != nil {
 		return nil, err
 	}

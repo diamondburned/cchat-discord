@@ -157,7 +157,7 @@ func NewMessageCreate(c *gateway.MessageCreateEvent, s *Session) Message {
 		c.Member, _ = s.Store.Member(c.GuildID, c.Author.ID)
 	}
 	if c.Member == nil {
-		s.Members.RequestMember(c.GuildID, c.Author.ID)
+		s.MemberState.RequestMember(c.GuildID, c.Author.ID)
 		return NewMessage(c.Message, s, NewUser(c.Author))
 	}
 
@@ -176,7 +176,7 @@ func NewBacklogMessage(m discord.Message, s *Session, g discord.Guild) Message {
 
 	mem, err := s.Store.Member(m.GuildID, m.Author.ID)
 	if err != nil {
-		s.Members.RequestMember(m.GuildID, m.Author.ID)
+		s.MemberState.RequestMember(m.GuildID, m.Author.ID)
 		return NewMessage(m, s, NewUser(m.Author))
 	}
 

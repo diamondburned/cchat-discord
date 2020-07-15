@@ -29,6 +29,8 @@ github.com/diamondburned/arikawa v0.9.6 h1:6TpfTKa2btoVQGxojNqv8g2YC0tIc/tX5w/OC
 github.com/diamondburned/arikawa v0.9.6/go.mod h1:nIhVIatzTQhPUa7NB8w4koG1RF9gYbpAr8Fj8sKq660=
 github.com/diamondburned/arikawa v0.10.2 h1:xTsFWlWwGzFr8HD7tyv2jMRyserOR4yV5dhq/PZMPAA=
 github.com/diamondburned/arikawa v0.10.2/go.mod h1:nIhVIatzTQhPUa7NB8w4koG1RF9gYbpAr8Fj8sKq660=
+github.com/diamondburned/arikawa v0.10.5 h1:o5lBopooA+8cXlKZdct5qF0xztuZZ35phvQrwGS5vYM=
+github.com/diamondburned/arikawa v0.10.5/go.mod h1:nIhVIatzTQhPUa7NB8w4koG1RF9gYbpAr8Fj8sKq660=
 github.com/diamondburned/cchat v0.0.34 h1:BGiVxMRA9dmW3rLilIldBvjVan7eTTpaWCCfX9IKBYU=
 github.com/diamondburned/cchat v0.0.34/go.mod h1:+zXktogE45A0om4fT6B/z6Ii7FXNafjxsNspI0rlhbU=
 github.com/diamondburned/cchat v0.0.35 h1:WiMGl8BQJgbP9E4xRxgLGlqUsHpTcJgDKDt8/6a7lBk=
@@ -59,6 +61,8 @@ github.com/diamondburned/ningen v0.1.1-0.20200711215126-d4b8a17e818d h1:XgG/KRbA
 github.com/diamondburned/ningen v0.1.1-0.20200711215126-d4b8a17e818d/go.mod h1:NVneOJDUDEIC3cnyeh2vpeAPVtBdC2Kcy+uwDy4o2qk=
 github.com/diamondburned/ningen v0.1.1-0.20200712031630-349ee2c3f01c h1:CpYhIGiRzee7Jm0H4c0fLvRe/08QitDNo8KHYtrOmFE=
 github.com/diamondburned/ningen v0.1.1-0.20200712031630-349ee2c3f01c/go.mod h1:NVneOJDUDEIC3cnyeh2vpeAPVtBdC2Kcy+uwDy4o2qk=
+github.com/diamondburned/ningen v0.1.1-0.20200715015332-cb3c7378b3c8 h1:0IxrMc4bh/sp2e0dnagKgM72i9CfCoo1FygyglJcXao=
+github.com/diamondburned/ningen v0.1.1-0.20200715015332-cb3c7378b3c8/go.mod h1:SKPY3387RHCbMrnefex9D+zlrA2yB+LCtaaQAgatAuc=
 github.com/dustin/go-humanize v1.0.0 h1:VSnTsYCnlFHaM2/igO1h6X3HA71jcobQuxemgkq4zYo=
 github.com/dustin/go-humanize v1.0.0/go.mod h1:HtrtbFcZ19U5GC7JDqmcUSB87Iq5E25KnS6fMYU6eOk=
 github.com/envoyproxy/go-control-plane v0.9.1-0.20191026205805-5f8ba28d4473/go.mod h1:YTl/9mNaCwkRvm6d1a2C3ymFceY/DCBVvsKhRF0iEA4=

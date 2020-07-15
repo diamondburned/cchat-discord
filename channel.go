@@ -204,7 +204,7 @@ func (ch *Channel) JoinServer(ctx context.Context, ct cchat.MessagesContainer) (
 		}
 
 		// Subscribe to typing events.
-		ch.session.Members.Subscribe(ch.guildID)
+		ch.session.MemberState.Subscribe(ch.guildID)
 
 		// Listen to new members before creating the backlog and requesting members.
 		addcancel(ch.session.AddHandler(func(c *gateway.GuildMembersChunkEvent) {
