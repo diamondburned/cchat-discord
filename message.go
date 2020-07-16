@@ -64,9 +64,17 @@ type Author struct {
 }
 
 func NewUser(u discord.User) Author {
+	var name = text.Rich{Content: u.Username}
+	if u.Bot {
+		name.Content += " "
+		name.Segments = append(name.Segments,
+			segments.NewBlurpleSegment(segments.Write(&name, "[BOT]")),
+		)
+	}
+
 	return Author{
 		id:     u.ID,
-		name:   text.Rich{Content: u.Username},
+		name:   name,
 		avatar: AvatarURL(u.AvatarURL()),
 	}
 }
@@ -94,6 +102,13 @@ func RenderMemberName(m discord.Member, g discord.Guild) text.Rich {
 		name.Segments = []text.Segment{
 			segments.NewColored(len(name.Content), c.Uint32()),
 		}
+	}
+
+	if m.User.Bot {
+		name.Content += " "
+		name.Segments = append(name.Segments,
+			segments.NewBlurpleSegment(segments.Write(&name, "[BOT]")),
+		)
 	}
 
 	return name

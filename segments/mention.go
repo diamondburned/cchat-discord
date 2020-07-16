@@ -12,8 +12,6 @@ import (
 	"github.com/yuin/goldmark/ast"
 )
 
-const blurple = 0x7289DA
-
 type MentionSegment struct {
 	start, end int
 	*md.Mention

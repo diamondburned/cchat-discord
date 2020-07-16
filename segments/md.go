@@ -11,6 +11,13 @@ import (
 	"github.com/yuin/goldmark/ast"
 )
 
+func Write(rich *text.Rich, content string, segs ...text.Segment) (start, end int) {
+	start = len(rich.Content)
+	end = len(rich.Content) + len(content)
+	rich.Content += content
+	return
+}
+
 func ParseMessage(m *discord.Message, s state.Store) text.Rich {
 	var content = []byte(m.Content)
 	var node = md.ParseWithMessage(content, s, m, true)

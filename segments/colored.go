@@ -2,6 +2,8 @@ package segments
 
 import "github.com/diamondburned/cchat/text"
 
+const blurple = 0x7289DA
+
 type Colored struct {
 	start int
 	end   int
@@ -15,6 +17,10 @@ var (
 
 func NewColored(strlen int, color uint32) Colored {
 	return Colored{0, strlen, color}
+}
+
+func NewBlurpleSegment(start, end int) Colored {
+	return NewColoredSegment(start, end, blurple)
 }
 
 func NewColoredSegment(start, end int, color uint32) Colored {
