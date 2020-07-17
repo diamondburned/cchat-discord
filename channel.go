@@ -11,6 +11,7 @@ import (
 	"github.com/diamondburned/cchat"
 	"github.com/diamondburned/cchat-discord/segments"
 	"github.com/diamondburned/cchat/text"
+	"github.com/diamondburned/ningen/states/read"
 	"github.com/pkg/errors"
 )
 
@@ -75,6 +76,7 @@ var (
 	_ cchat.ServerMessageEditor           = (*Channel)(nil)
 	_ cchat.ServerMessageActioner         = (*Channel)(nil)
 	_ cchat.ServerMessageTypingIndicator  = (*Channel)(nil)
+	_ cchat.ServerMessageUnreadIndicator  = (*Channel)(nil)
 )
 
 func NewChannel(s *Session, ch discord.Channel) *Channel {
@@ -251,6 +253,11 @@ func (ch *Channel) JoinServer(ctx context.Context, ct cchat.MessagesContainer) (
 		ch.session.AddHandler(func(m *gateway.MessageCreateEvent) {
 			if m.ChannelID == ch.id {
 				ct.CreateMessage(NewMessageCreate(m, ch.session))
+				// Mark as read if the message is not ours. This handler will
+				// stay here as long as the client is seeing the channel.
+				if m.Author.ID != ch.session.userID {
+					ch.session.ReadState.MarkRead(ch.id, m.ID)
+				}
 			}
 		}),
 		ch.session.AddHandler(func(m *gateway.MessageUpdateEvent) {
@@ -467,6 +474,25 @@ func (ch *Channel) TypingSubscribe(ti cchat.TypingIndicator) (func(), error) {
 		}
 		if typer, err := NewTyper(ch.session.Store, t); err == nil {
 			ti.AddTyper(typer)
+		}
+	}), nil
+}
+
+func (ch *Channel) UnreadIndicate(indicator cchat.UnreadIndicator) (func(), error) {
+	if rs := ch.session.ReadState.FindLast(ch.id); rs != nil {
+		c, err := ch.self()
+		if err != nil {
+			return nil, errors.Wrap(err, "Failed to get self channel")
+		}
+
+		if c.LastMessageID > rs.LastMessageID {
+			indicator.SetUnread(true, rs.MentionCount > 0)
+		}
+	}
+
+	return ch.session.ReadState.OnUpdate(func(ev *read.UpdateEvent) {
+		if ch.id == ev.ChannelID {
+			indicator.SetUnread(ev.Unread, ev.MentionCount > 0)
 		}
 	}), nil
 }
