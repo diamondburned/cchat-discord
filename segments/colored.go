@@ -20,7 +20,7 @@ func NewColored(strlen int, color uint32) Colored {
 }
 
 func NewBlurpleSegment(start, end int) Colored {
-	return NewColoredSegment(start, end, blurple)
+	return Colored{start, end, blurple}
 }
 
 func NewColoredSegment(start, end int, color uint32) Colored {

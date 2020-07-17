@@ -72,6 +72,11 @@ func NewUser(u discord.User) Author {
 		)
 	}
 
+	// Append a clickable user popup.
+	name.Segments = append(name.Segments,
+		segments.UserSegment(0, len(name.Content), u),
+	)
+
 	return Author{
 		id:     u.ID,
 		name:   name,
@@ -104,12 +109,18 @@ func RenderMemberName(m discord.Member, g discord.Guild) text.Rich {
 		}
 	}
 
+	// Append the bot prefix if the user is a bot.
 	if m.User.Bot {
 		name.Content += " "
 		name.Segments = append(name.Segments,
 			segments.NewBlurpleSegment(segments.Write(&name, "[BOT]")),
 		)
 	}
+
+	// Append a clickable user popup.
+	name.Segments = append(name.Segments,
+		segments.MemberSegment(0, len(name.Content), g, m),
+	)
 
 	return name
 }

@@ -12,6 +12,44 @@ import (
 	"github.com/yuin/goldmark/ast"
 )
 
+// NameSegment represents a clickable member name; it does not implement colors.
+type NameSegment struct {
+	start, end int
+
+	guild  discord.Guild
+	member discord.Member
+}
+
+var (
+	_ text.Segment   = (*NameSegment)(nil)
+	_ text.Mentioner = (*NameSegment)(nil)
+)
+
+func UserSegment(start, end int, u discord.User) NameSegment {
+	return NameSegment{
+		start:  start,
+		end:    end,
+		member: discord.Member{User: u},
+	}
+}
+
+func MemberSegment(start, end int, guild discord.Guild, m discord.Member) NameSegment {
+	return NameSegment{
+		start:  start,
+		end:    end,
+		guild:  guild,
+		member: m,
+	}
+}
+
+func (m NameSegment) Bounds() (start, end int) {
+	return m.start, m.end
+}
+
+func (m NameSegment) MentionInfo() text.Rich {
+	return userInfo(m.guild, m.member)
+}
+
 type MentionSegment struct {
 	start, end int
 	*md.Mention
@@ -115,14 +153,37 @@ func (m MentionSegment) channelInfo() text.Rich {
 }
 
 func (m MentionSegment) userInfo() text.Rich {
+	// // We should have a member if there's nil. Sometimes when the members aren't
+	// // prefetched, the markdown parser can miss them. We can check this again.
+	// if m.GuildUser.Member == nil && m.guild.Valid() {
+	// 	// Best effort; fine if it's nil.
+	// 	m.GuildUser.Member, _ = m.store.Member(m.guild, m.GuildUser.ID)
+	// }
+
+	if m.GuildUser.Member == nil {
+		m.GuildUser.Member = &discord.Member{
+			User: m.GuildUser.User,
+		}
+	}
+
+	// Get the guild for the role slice. If not, then too bad.
+	g, err := m.store.Guild(m.guild)
+	if err != nil {
+		g = &discord.Guild{}
+	}
+
+	return userInfo(*g, *m.GuildUser.Member)
+}
+
+func userInfo(guild discord.Guild, member discord.Member) text.Rich {
 	var content bytes.Buffer
 	var segment text.Rich
 
 	// Make a large avatar if there's one.
-	if m.GuildUser.Avatar != "" {
+	if member.User.Avatar != "" {
 		segmentadd(&segment, AvatarSegment{
 			start: 0,
-			url:   m.GuildUser.AvatarURL(), // full URL
+			url:   member.User.AvatarURL(), // full URL
 			text:  "Avatar",
 			size:  72, // large
 		})
@@ -130,22 +191,15 @@ func (m MentionSegment) userInfo() text.Rich {
 		content.WriteByte(' ')
 	}
 
-	// We should have a member if there's nil. Sometimes when the members aren't
-	// prefetched, the markdown parser can miss them. We can check this again.
-	if m.GuildUser.Member == nil && m.guild.Valid() {
-		// Best effort; fine if it's nil.
-		m.GuildUser.Member, _ = m.store.Member(m.guild, m.GuildUser.ID)
-	}
-
 	// Write the nickname if there's one; else, write the username only.
-	if m.GuildUser.Member != nil && m.GuildUser.Member.Nick != "" {
-		content.WriteString(m.GuildUser.Member.Nick)
+	if member.Nick != "" {
+		content.WriteString(member.Nick)
 		content.WriteByte(' ')
 
 		start, end := writestringbuf(&content, fmt.Sprintf(
 			"(%s#%s)",
-			m.GuildUser.Username,
-			m.GuildUser.Discriminator,
+			member.User.Username,
+			member.User.Discriminator,
 		))
 
 		segmentadd(&segment, InlineSegment{
@@ -154,34 +208,46 @@ func (m MentionSegment) userInfo() text.Rich {
 			attributes: text.AttrDimmed,
 		})
 	} else {
-		content.WriteString(m.GuildUser.Username)
+		content.WriteString(member.User.Username)
 		content.WriteByte('#')
-		content.WriteString(m.GuildUser.Discriminator)
+		content.WriteString(member.User.Discriminator)
 	}
 
-	// Write extra information if any.
-	if m.GuildUser.Member != nil && len(m.GuildUser.Member.RoleIDs) > 0 {
+	// Write extra information if any, but only if we have the guild state.
+	if len(member.RoleIDs) > 0 && guild.ID.Valid() {
 		// Write a prepended new line, as role writes will always prepend a new
 		// line. This is to prevent a trailing new line.
 		content.WriteString("\n\n--- Roles ---")
 
-		for _, id := range m.GuildUser.Member.RoleIDs {
-			r, err := m.store.Role(m.guild, id)
-			if err != nil {
+		for _, id := range member.RoleIDs {
+			rl, ok := findRole(guild.Roles, id)
+			if !ok {
 				continue
 			}
 
 			// Prepend a new line before each item.
 			content.WriteByte('\n')
 			// Write exactly the role name, then grab the segment and color it.
-			start, end := writestringbuf(&content, "@"+r.Name)
-			segmentadd(&segment, NewColoredSegment(start, end, r.Color.Uint32()))
+			start, end := writestringbuf(&content, "@"+rl.Name)
+			// But we only add the color if the role has one.
+			if color := rl.Color.Uint32(); color > 0 {
+				segmentadd(&segment, NewColoredSegment(start, end, rl.Color.Uint32()))
+			}
 		}
 	}
 
 	// Assign the written content into the text segment and return it.
 	segment.Content = content.String()
 	return segment
+}
+
+func findRole(roles []discord.Role, id discord.Snowflake) (discord.Role, bool) {
+	for _, role := range roles {
+		if role.ID == id {
+			return role, true
+		}
+	}
+	return discord.Role{}, false
 }
 
 func (m MentionSegment) roleInfo() text.Rich {
