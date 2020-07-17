@@ -14,16 +14,22 @@ import (
 
 var imageExts = []string{".jpg", ".jpeg", ".png", ".webp", ".gif"}
 
+func (r *TextRenderer) writeEmbedSep(embedColor discord.Color) {
+	if start, end := r.writeString("---"); embedColor > 0 {
+		r.append(NewColoredSegment(start, end, embedColor.Uint32()))
+	}
+}
+
 func (r *TextRenderer) renderEmbeds(embeds []discord.Embed, m *discord.Message, s state.Store) {
 	for _, embed := range embeds {
 		r.startBlock()
-		r.buf.WriteString("---")
+		r.writeEmbedSep(embed.Color)
 		r.ensureBreak()
 
 		r.renderEmbed(embed, m, s)
 
 		r.ensureBreak()
-		r.buf.WriteString("---") // render prepends newline already
+		r.writeEmbedSep(embed.Color) // render prepends newline already
 		r.endBlock()
 	}
 }

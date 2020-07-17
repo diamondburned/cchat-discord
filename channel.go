@@ -24,16 +24,10 @@ func chGuildCheck(chType discord.ChannelType) bool {
 }
 
 func filterAccessible(s *Session, chs []discord.Channel) []discord.Channel {
-	u, err := s.Me()
-	if err != nil {
-		// Shouldn't happen.
-		return chs
-	}
-
 	filtered := chs[:0]
 
 	for _, ch := range chs {
-		p, err := s.Permissions(ch.ID, u.ID)
+		p, err := s.Permissions(ch.ID, s.userID)
 		// Treat error as non-fatal and add the channel anyway.
 		if err != nil || p.Has(discord.PermissionViewChannel) {
 			filtered = append(filtered, ch)
@@ -460,17 +454,19 @@ func (ch *Channel) Typing() error {
 	return ch.session.Typing(ch.id)
 }
 
-// TypingTimeout returns 8 seconds.
+// TypingTimeout returns 10 seconds.
 func (ch *Channel) TypingTimeout() time.Duration {
-	return 8 * time.Second
+	return 10 * time.Second
 }
 
 func (ch *Channel) TypingSubscribe(ti cchat.TypingIndicator) (func(), error) {
 	return ch.session.AddHandler(func(t *gateway.TypingStartEvent) {
-		if t.ChannelID == ch.id {
-			if typer, err := NewTyper(ch.session.Store, t); err == nil {
-				ti.AddTyper(typer)
-			}
+		// Ignore channel mismatch or if the typing event is ours.
+		if t.ChannelID != ch.id || t.UserID == ch.session.userID {
+			return
+		}
+		if typer, err := NewTyper(ch.session.Store, t); err == nil {
+			ti.AddTyper(typer)
 		}
 	}), nil
 }
