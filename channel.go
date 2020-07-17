@@ -257,11 +257,7 @@ func (ch *Channel) JoinServer(ctx context.Context, ct cchat.MessagesContainer) (
 		ch.session.AddHandler(func(m *gateway.MessageCreateEvent) {
 			if m.ChannelID == ch.id {
 				ct.CreateMessage(NewMessageCreate(m, ch.session))
-				// Mark as read if the message is not ours. This handler will
-				// stay here as long as the client is seeing the channel.
-				if m.Author.ID != ch.session.userID {
-					ch.session.ReadState.MarkRead(ch.id, m.ID)
-				}
+				ch.session.ReadState.MarkRead(ch.id, m.ID)
 			}
 		}),
 		ch.session.AddHandler(func(m *gateway.MessageUpdateEvent) {

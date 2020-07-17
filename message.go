@@ -104,9 +104,9 @@ func RenderMemberName(m discord.Member, g discord.Guild) text.Rich {
 
 	// Update the color.
 	if c := discord.MemberColor(g, m); c > 0 {
-		name.Segments = []text.Segment{
+		name.Segments = append(name.Segments,
 			segments.NewColored(len(name.Content), c.Uint32()),
-		}
+		)
 	}
 
 	// Append the bot prefix if the user is a bot.
