@@ -237,15 +237,19 @@ func (ch *Channel) JoinServer(ctx context.Context, ct cchat.MessagesContainer) (
 		}
 	}
 
-	// Sort messages chronologically using the ID so that the oldest messages
-	// (ones with the smallest snowflake) is in front.
-	sort.Slice(m, func(i, j int) bool {
-		return m[i].ID < m[j].ID
-	})
+	// Only do all this if we even have any messages.
+	if len(m) > 0 {
+		// Sort messages chronologically using the ID so that the oldest messages
+		// (ones with the smallest snowflake) is in front.
+		sort.Slice(m, func(i, j int) bool { return m[i].ID < m[j].ID })
 
-	// Iterate from the earliest messages to the latest messages.
-	for _, m := range m {
-		ct.CreateMessage(constructor(m))
+		// Iterate from the earliest messages to the latest messages.
+		for _, m := range m {
+			ct.CreateMessage(constructor(m))
+		}
+
+		// Mark this channel as read.
+		ch.session.ReadState.MarkRead(ch.id, m[len(m)-1].ID)
 	}
 
 	// Bind the handler.
