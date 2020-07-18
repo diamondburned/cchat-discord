@@ -478,6 +478,14 @@ func (ch *Channel) TypingSubscribe(ti cchat.TypingIndicator) (func(), error) {
 	}), nil
 }
 
+// muted returns if this channel is muted. This includes the channel's category
+// and guild.
+func (ch *Channel) muted() bool {
+	return (ch.guildID.Valid() && ch.session.MutedState.Guild(ch.guildID, false)) ||
+		ch.session.MutedState.Channel(ch.id) ||
+		ch.session.MutedState.Category(ch.id)
+}
+
 func (ch *Channel) UnreadIndicate(indicator cchat.UnreadIndicator) (func(), error) {
 	if rs := ch.session.ReadState.FindLast(ch.id); rs != nil {
 		c, err := ch.self()
@@ -485,13 +493,13 @@ func (ch *Channel) UnreadIndicate(indicator cchat.UnreadIndicator) (func(), erro
 			return nil, errors.Wrap(err, "Failed to get self channel")
 		}
 
-		if c.LastMessageID > rs.LastMessageID {
+		if c.LastMessageID > rs.LastMessageID && !ch.muted() {
 			indicator.SetUnread(true, rs.MentionCount > 0)
 		}
 	}
 
 	return ch.session.ReadState.OnUpdate(func(ev *read.UpdateEvent) {
-		if ch.id == ev.ChannelID {
+		if ch.id == ev.ChannelID && !ch.muted() {
 			indicator.SetUnread(ev.Unread, ev.MentionCount > 0)
 		}
 	}), nil
