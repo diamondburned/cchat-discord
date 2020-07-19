@@ -2,10 +2,12 @@ package discord
 
 import (
 	"context"
+	"log"
 
 	"github.com/diamondburned/arikawa/discord"
 	"github.com/diamondburned/arikawa/gateway"
 	"github.com/diamondburned/arikawa/state"
+	"github.com/diamondburned/arikawa/utils/httputil/httpdriver"
 	"github.com/diamondburned/cchat"
 	"github.com/diamondburned/cchat/services"
 	"github.com/diamondburned/cchat/text"
@@ -100,7 +102,10 @@ func NewSession(s *state.State) (*Session, error) {
 		return nil, errors.Wrap(err, "Failed to create a state wrapper")
 	}
 
-	var _ state.Store = s
+	n.Client.OnRequest = append(n.Client.OnRequest, func(r httpdriver.Request) error {
+		log.Println("[Discord] Request", r.GetPath())
+		return nil
+	})
 
 	if err := s.Open(); err != nil {
 		return nil, err
