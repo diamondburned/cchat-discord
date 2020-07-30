@@ -5,7 +5,6 @@ import (
 
 	"github.com/diamondburned/arikawa/discord"
 	"github.com/diamondburned/arikawa/gateway"
-	"github.com/diamondburned/arikawa/state"
 	"github.com/diamondburned/cchat"
 	"github.com/pkg/errors"
 )
@@ -24,27 +23,27 @@ func NewTyperAuthor(author Author, ev *gateway.TypingStartEvent) Typer {
 	}
 }
 
-func NewTyper(store state.Store, ev *gateway.TypingStartEvent) (*Typer, error) {
+func NewTyper(s *Session, ev *gateway.TypingStartEvent) (*Typer, error) {
 	if ev.GuildID.Valid() {
-		g, err := store.Guild(ev.GuildID)
+		g, err := s.Store.Guild(ev.GuildID)
 		if err != nil {
 			return nil, err
 		}
 
 		if ev.Member == nil {
-			ev.Member, err = store.Member(ev.GuildID, ev.UserID)
+			ev.Member, err = s.Store.Member(ev.GuildID, ev.UserID)
 			if err != nil {
 				return nil, err
 			}
 		}
 
 		return &Typer{
-			Author: NewGuildMember(*ev.Member, *g),
+			Author: NewGuildMember(*ev.Member, *g, s),
 			time:   ev.Timestamp,
 		}, nil
 	}
 
-	c, err := store.Channel(ev.ChannelID)
+	c, err := s.Store.Channel(ev.ChannelID)
 	if err != nil {
 		return nil, err
 	}
@@ -52,7 +51,7 @@ func NewTyper(store state.Store, ev *gateway.TypingStartEvent) (*Typer, error) {
 	for _, user := range c.DMRecipients {
 		if user.ID == ev.UserID {
 			return &Typer{
-				Author: NewUser(user),
+				Author: NewUser(user, s),
 				time:   ev.Timestamp,
 			}, nil
 		}

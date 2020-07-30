@@ -7,7 +7,9 @@ import (
 
 	"github.com/diamondburned/arikawa/discord"
 	"github.com/diamondburned/arikawa/state"
+	"github.com/diamondburned/cchat-discord/urlutils"
 	"github.com/diamondburned/cchat/text"
+	"github.com/diamondburned/ningen"
 	"github.com/diamondburned/ningen/md"
 	"github.com/yuin/goldmark/ast"
 )
@@ -18,11 +20,13 @@ type NameSegment struct {
 
 	guild  discord.Guild
 	member discord.Member
+	state  *ningen.State // optional
 }
 
 var (
-	_ text.Segment   = (*NameSegment)(nil)
-	_ text.Mentioner = (*NameSegment)(nil)
+	_ text.Segment         = (*NameSegment)(nil)
+	_ text.Mentioner       = (*NameSegment)(nil)
+	_ text.MentionerAvatar = (*NameSegment)(nil)
 )
 
 func UserSegment(start, end int, u discord.User) NameSegment {
@@ -42,12 +46,23 @@ func MemberSegment(start, end int, guild discord.Guild, m discord.Member) NameSe
 	}
 }
 
+// WithState assigns a ningen state into the given name segment. This allows the
+// popovers to have additional information such as user notes.
+func (m *NameSegment) WithState(state *ningen.State) {
+	m.state = state
+}
+
 func (m NameSegment) Bounds() (start, end int) {
 	return m.start, m.end
 }
 
 func (m NameSegment) MentionInfo() text.Rich {
-	return userInfo(m.guild, m.member)
+	return userInfo(m.guild, m.member, m.state)
+}
+
+// Avatar returns the large avatar URL.
+func (m NameSegment) Avatar() string {
+	return m.member.User.AvatarURL()
 }
 
 type MentionSegment struct {
@@ -59,9 +74,10 @@ type MentionSegment struct {
 }
 
 var (
-	_ text.Segment   = (*MentionSegment)(nil)
-	_ text.Colorer   = (*MentionSegment)(nil)
-	_ text.Mentioner = (*MentionSegment)(nil)
+	_ text.Segment         = (*MentionSegment)(nil)
+	_ text.Colorer         = (*MentionSegment)(nil)
+	_ text.Mentioner       = (*MentionSegment)(nil)
+	_ text.MentionerAvatar = (*MentionSegment)(nil)
 )
 
 func (r *TextRenderer) mention(n *md.Mention, enter bool) ast.WalkStatus {
@@ -133,33 +149,29 @@ func (m MentionSegment) MentionInfo() text.Rich {
 	return text.Rich{}
 }
 
+// Avatar returns the user avatar if any, else it returns an empty URL.
+func (m MentionSegment) Avatar() string {
+	if m.GuildUser != nil {
+		return m.GuildUser.AvatarURL()
+	}
+
+	return ""
+}
+
 func (m MentionSegment) channelInfo() text.Rich {
-	content := strings.Builder{}
-	content.WriteByte('#')
-	content.WriteString(m.Channel.Name)
-
+	var topic = m.Channel.Topic
 	if m.Channel.NSFW {
-		content.WriteString(" (NSFW)")
+		topic = "(NSFW)\n" + topic
 	}
 
-	if m.Channel.Topic != "" {
-		content.WriteByte('\n')
-		content.WriteString(m.Channel.Topic)
+	if topic == "" {
+		return text.Rich{}
 	}
 
-	return text.Rich{
-		Content: content.String(),
-	}
+	return Parse([]byte(topic))
 }
 
 func (m MentionSegment) userInfo() text.Rich {
-	// // We should have a member if there's nil. Sometimes when the members aren't
-	// // prefetched, the markdown parser can miss them. We can check this again.
-	// if m.GuildUser.Member == nil && m.guild.Valid() {
-	// 	// Best effort; fine if it's nil.
-	// 	m.GuildUser.Member, _ = m.store.Member(m.guild, m.GuildUser.ID)
-	// }
-
 	if m.GuildUser.Member == nil {
 		m.GuildUser.Member = &discord.Member{
 			User: m.GuildUser.User,
@@ -172,52 +184,67 @@ func (m MentionSegment) userInfo() text.Rich {
 		g = &discord.Guild{}
 	}
 
-	return userInfo(*g, *m.GuildUser.Member)
+	return userInfo(*g, *m.GuildUser.Member, nil)
 }
 
-func userInfo(guild discord.Guild, member discord.Member) text.Rich {
+func (m MentionSegment) roleInfo() text.Rich {
+	// // We don't have much to write here.
+	// var segment = text.Rich{
+	// 	Content: m.GuildRole.Name,
+	// }
+
+	// // Maybe add a color if we have any.
+	// if c := m.GuildRole.Color.Uint32(); c > 0 {
+	// 	segment.Segments = []text.Segment{
+	// 		NewColored(len(m.GuildRole.Name), m.GuildRole.Color.Uint32()),
+	// 	}
+	// }
+
+	return text.Rich{}
+}
+
+type LargeActivityImage struct {
+	start int
+	url   string
+	text  string
+}
+
+func NewLargeActivityImage(start int, ac discord.Activity) LargeActivityImage {
+	var text = ac.Assets.LargeText
+	if text == "" {
+		text = "Activity Image"
+	}
+
+	return LargeActivityImage{
+		start: start,
+		url:   urlutils.AssetURL(ac.ApplicationID, ac.Assets.LargeImage),
+		text:  ac.Assets.LargeText,
+	}
+}
+
+func (i LargeActivityImage) Bounds() (start, end int) { return i.start, i.start }
+func (i LargeActivityImage) Image() string            { return i.url }
+func (i LargeActivityImage) ImageSize() (w, h int)    { return 60, 60 }
+func (i LargeActivityImage) ImageText() string        { return i.text }
+
+func userInfo(guild discord.Guild, member discord.Member, state *ningen.State) text.Rich {
 	var content bytes.Buffer
 	var segment text.Rich
 
-	// Make a large avatar if there's one.
-	if member.User.Avatar != "" {
-		segmentadd(&segment, AvatarSegment{
-			start: 0,
-			url:   member.User.AvatarURL(), // full URL
-			text:  "Avatar",
-			size:  72, // large
-		})
-		// Space out.
-		content.WriteByte(' ')
-	}
-
-	// Write the nickname if there's one; else, write the username only.
+	// Write the username if the user has a nickname.
 	if member.Nick != "" {
-		content.WriteString(member.Nick)
-		content.WriteByte(' ')
-
-		start, end := writestringbuf(&content, fmt.Sprintf(
-			"(%s#%s)",
-			member.User.Username,
-			member.User.Discriminator,
-		))
-
-		segmentadd(&segment, InlineSegment{
-			start:      start,
-			end:        end,
-			attributes: text.AttrDimmed,
-		})
-	} else {
+		content.WriteString("Username: ")
 		content.WriteString(member.User.Username)
 		content.WriteByte('#')
 		content.WriteString(member.User.Discriminator)
+		content.WriteString("\n\n")
 	}
 
 	// Write extra information if any, but only if we have the guild state.
 	if len(member.RoleIDs) > 0 && guild.ID.Valid() {
 		// Write a prepended new line, as role writes will always prepend a new
 		// line. This is to prevent a trailing new line.
-		content.WriteString("\n\n--- Roles ---")
+		formatSectionf(&segment, &content, "Roles")
 
 		for _, id := range member.RoleIDs {
 			rl, ok := findRole(guild.Roles, id)
@@ -234,11 +261,123 @@ func userInfo(guild discord.Guild, member discord.Member) text.Rich {
 				segmentadd(&segment, NewColoredSegment(start, end, rl.Color.Uint32()))
 			}
 		}
+
+		// End section.
+		content.WriteString("\n\n")
 	}
 
-	// Assign the written content into the text segment and return it.
-	segment.Content = content.String()
+	// These information can only be obtained from the state. As such, we check
+	// if the state is given.
+	if state != nil {
+		// Does the user have rich presence? If so, write.
+		if p, err := state.Presence(guild.ID, member.User.ID); err == nil {
+			for _, ac := range p.Activities {
+				formatActivity(&segment, &content, ac)
+				content.WriteString("\n\n")
+			}
+		} else if guild.ID.Valid() {
+			// If we're still in a guild, then we can ask Discord for that
+			// member with their presence attached.
+			state.MemberState.RequestMember(guild.ID, member.User.ID)
+		}
+
+		// Write the user's note if any.
+		if note := state.NoteState.Note(member.User.ID); note != "" {
+			formatSectionf(&segment, &content, "Note")
+			content.WriteRune('\n')
+
+			start, end := writestringbuf(&content, note)
+			segmentadd(&segment, InlineSegment{start, end, text.AttrMonospace})
+
+			content.WriteString("\n\n")
+		}
+	}
+
+	// Assign the written content into the text segment and return it after
+	// trimming the trailing new line.
+	segment.Content = strings.TrimSuffix(content.String(), "\n")
 	return segment
+}
+
+func formatSectionf(segment *text.Rich, content *bytes.Buffer, f string, argv ...interface{}) {
+	// Treat f as a regular string at first.
+	var str = fmt.Sprintf("%s", f)
+
+	// If there are argvs, then treat f as a format string.
+	if len(argv) > 0 {
+		str = fmt.Sprintf(str, argv...)
+	}
+
+	start, end := writestringbuf(content, str)
+	segmentadd(segment, InlineSegment{start, end, text.AttrBold | text.AttrUnderline})
+}
+
+func formatActivity(segment *text.Rich, content *bytes.Buffer, ac discord.Activity) {
+	switch ac.Type {
+	case discord.GameActivity:
+		formatSectionf(segment, content, "Playing %s", ac.Name)
+		content.WriteByte('\n')
+
+	case discord.ListeningActivity:
+		formatSectionf(segment, content, "Listening to %s", ac.Name)
+		content.WriteByte('\n')
+
+	case discord.StreamingActivity:
+		formatSectionf(segment, content, "Streaming on %s", ac.Name)
+		content.WriteByte('\n')
+
+	case discord.CustomActivity:
+		formatSectionf(segment, content, "Status")
+		content.WriteByte('\n')
+
+		if ac.Emoji != nil {
+			if !ac.Emoji.ID.Valid() {
+				content.WriteString(ac.Emoji.Name)
+			} else {
+				segmentadd(segment, EmojiSegment{
+					start:    content.Len(),
+					name:     ac.Emoji.Name,
+					emojiURL: ac.Emoji.EmojiURL() + "&size=64",
+					large:    ac.State == "",
+				})
+			}
+
+			content.WriteByte(' ')
+		}
+
+	default:
+		formatSectionf(segment, content, "Status")
+		content.WriteByte('\n')
+	}
+
+	// Insert an image if there's any.
+	if ac.Assets != nil && ac.Assets.LargeImage != "" {
+		segmentadd(segment, NewLargeActivityImage(content.Len(), ac))
+		content.WriteString(" ")
+	}
+
+	if ac.Details != "" {
+		start, end := writestringbuf(content, ac.Details)
+		segmentadd(segment, InlineSegment{start, end, text.AttrBold})
+		content.WriteByte('\n')
+	}
+
+	if ac.State != "" {
+		content.WriteString(ac.State)
+	}
+}
+
+func getPresence(state *ningen.State, guildID, userID discord.Snowflake) *discord.Activity {
+	p, err := state.Presence(guildID, userID)
+	if err != nil {
+		return nil
+	}
+
+	if len(p.Activities) > 0 {
+		return &p.Activities[0]
+	}
+
+	return p.Game
 }
 
 func findRole(roles []discord.Role, id discord.Snowflake) (discord.Role, bool) {
@@ -248,20 +387,4 @@ func findRole(roles []discord.Role, id discord.Snowflake) (discord.Role, bool) {
 		}
 	}
 	return discord.Role{}, false
-}
-
-func (m MentionSegment) roleInfo() text.Rich {
-	// We don't have much to write here.
-	var segment = text.Rich{
-		Content: m.GuildRole.Name,
-	}
-
-	// Maybe add a color if we have any.
-	if c := m.GuildRole.Color.Uint32(); c > 0 {
-		segment.Segments = []text.Segment{
-			NewColored(len(m.GuildRole.Name), m.GuildRole.Color.Uint32()),
-		}
-	}
-
-	return segment
 }

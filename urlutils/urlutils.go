@@ -5,6 +5,8 @@ import (
 	"path"
 	"strconv"
 	"strings"
+
+	"github.com/diamondburned/arikawa/discord"
 )
 
 // AvatarURL wraps the URL with URL queries for the avatar.
@@ -54,4 +56,12 @@ func ExtIs(URL string, exts []string) bool {
 	}
 
 	return false
+}
+
+// AssetURL generates the image URL from the given asset image ID.
+func AssetURL(appID discord.Snowflake, imageID string) string {
+	if strings.HasPrefix(imageID, "spotify:") {
+		return "https://i.scdn.co/image/" + strings.TrimPrefix(imageID, "spotify:")
+	}
+	return "https://cdn.discordapp.com/app-assets/" + appID.String() + "/" + imageID + ".png"
 }

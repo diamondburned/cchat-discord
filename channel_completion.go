@@ -4,7 +4,6 @@ import (
 	"strings"
 
 	"github.com/diamondburned/arikawa/discord"
-	"github.com/diamondburned/arikawa/state"
 	"github.com/diamondburned/cchat"
 	"github.com/diamondburned/cchat-discord/urlutils"
 	"github.com/diamondburned/cchat/text"
@@ -12,13 +11,13 @@ import (
 
 const MaxCompletion = 15
 
-func completionUserEntry(s state.Store, u discord.User, g *discord.Guild) cchat.CompletionEntry {
+func completionUserEntry(s *Session, u discord.User, g *discord.Guild) cchat.CompletionEntry {
 	if g != nil {
-		m, err := s.Member(g.ID, u.ID)
+		m, err := s.Store.Member(g.ID, u.ID)
 		if err == nil {
 			return cchat.CompletionEntry{
 				Raw:       u.Mention(),
-				Text:      RenderMemberName(*m, *g),
+				Text:      RenderMemberName(*m, *g, s),
 				Secondary: text.Rich{Content: u.Username + "#" + u.Discriminator},
 				IconURL:   u.AvatarURL(),
 			}
@@ -51,7 +50,7 @@ func (ch *Channel) completeMentions(word string) (entries []cchat.CompletionEntr
 
 			// Record the current author and add the entry to the list.
 			authors[msg.Author.ID] = struct{}{}
-			entries = append(entries, completionUserEntry(ch.session.Store, msg.Author, g))
+			entries = append(entries, completionUserEntry(ch.session, msg.Author, g))
 
 			if len(entries) >= MaxCompletion {
 				return
@@ -108,7 +107,7 @@ func (ch *Channel) completeMentions(word string) (entries []cchat.CompletionEntr
 		if contains(match, mem.User.Username, mem.Nick) {
 			entries = append(entries, cchat.CompletionEntry{
 				Raw:       mem.User.Mention(),
-				Text:      RenderMemberName(mem, *g),
+				Text:      RenderMemberName(mem, *g, ch.session),
 				Secondary: text.Rich{Content: mem.User.Username + "#" + mem.User.Discriminator},
 				IconURL:   mem.User.AvatarURL(),
 			})

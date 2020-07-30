@@ -63,7 +63,7 @@ type Author struct {
 	avatar string
 }
 
-func NewUser(u discord.User) Author {
+func NewUser(u discord.User, s *Session) Author {
 	var name = text.Rich{Content: u.Username}
 	if u.Bot {
 		name.Content += " "
@@ -73,9 +73,9 @@ func NewUser(u discord.User) Author {
 	}
 
 	// Append a clickable user popup.
-	name.Segments = append(name.Segments,
-		segments.UserSegment(0, len(name.Content), u),
-	)
+	useg := segments.UserSegment(0, len(name.Content), u)
+	useg.WithState(s.State)
+	name.Segments = append(name.Segments, useg)
 
 	return Author{
 		id:     u.ID,
@@ -84,15 +84,15 @@ func NewUser(u discord.User) Author {
 	}
 }
 
-func NewGuildMember(m discord.Member, g discord.Guild) Author {
+func NewGuildMember(m discord.Member, g discord.Guild, s *Session) Author {
 	return Author{
 		id:     m.User.ID,
-		name:   RenderMemberName(m, g),
+		name:   RenderMemberName(m, g, s),
 		avatar: AvatarURL(m.User.AvatarURL()),
 	}
 }
 
-func RenderMemberName(m discord.Member, g discord.Guild) text.Rich {
+func RenderMemberName(m discord.Member, g discord.Guild, s *Session) text.Rich {
 	var name = text.Rich{
 		Content: m.User.Username,
 	}
@@ -118,9 +118,9 @@ func RenderMemberName(m discord.Member, g discord.Guild) text.Rich {
 	}
 
 	// Append a clickable user popup.
-	name.Segments = append(name.Segments,
-		segments.MemberSegment(0, len(name.Content), g, m),
-	)
+	useg := segments.MemberSegment(0, len(name.Content), g, m)
+	useg.WithState(s.State)
+	name.Segments = append(name.Segments, useg)
 
 	return name
 }
@@ -163,10 +163,12 @@ func NewMessageUpdateContent(msg discord.Message, s *Session) Message {
 	}
 }
 
-func NewMessageUpdateAuthor(msg discord.Message, member discord.Member, g discord.Guild) Message {
+func NewMessageUpdateAuthor(
+	msg discord.Message, member discord.Member, g discord.Guild, s *Session) Message {
+
 	return Message{
 		messageHeader: newHeader(msg),
-		author:        NewGuildMember(member, g),
+		author:        NewGuildMember(member, g, s),
 	}
 }
 
@@ -176,7 +178,7 @@ func NewMessageCreate(c *gateway.MessageCreateEvent, s *Session) Message {
 	// This should not error.
 	g, err := s.Store.Guild(c.GuildID)
 	if err != nil {
-		return NewMessage(c.Message, s, NewUser(c.Author))
+		return NewMessage(c.Message, s, NewUser(c.Author, s))
 	}
 
 	if c.Member == nil {
@@ -184,10 +186,10 @@ func NewMessageCreate(c *gateway.MessageCreateEvent, s *Session) Message {
 	}
 	if c.Member == nil {
 		s.MemberState.RequestMember(c.GuildID, c.Author.ID)
-		return NewMessage(c.Message, s, NewUser(c.Author))
+		return NewMessage(c.Message, s, NewUser(c.Author, s))
 	}
 
-	return NewMessage(c.Message, s, NewGuildMember(*c.Member, *g))
+	return NewMessage(c.Message, s, NewGuildMember(*c.Member, *g, s))
 }
 
 // NewBacklogMessage uses the session to create a message fetched from the
@@ -197,27 +199,52 @@ func NewBacklogMessage(m discord.Message, s *Session, g discord.Guild) Message {
 	// If the message doesn't have a guild, then we don't need all the
 	// complicated member fetching process.
 	if !m.GuildID.Valid() {
-		return NewMessage(m, s, NewUser(m.Author))
+		return NewMessage(m, s, NewUser(m.Author, s))
 	}
 
 	mem, err := s.Store.Member(m.GuildID, m.Author.ID)
 	if err != nil {
 		s.MemberState.RequestMember(m.GuildID, m.Author.ID)
-		return NewMessage(m, s, NewUser(m.Author))
+		return NewMessage(m, s, NewUser(m.Author, s))
 	}
 
-	return NewMessage(m, s, NewGuildMember(*mem, g))
+	return NewMessage(m, s, NewGuildMember(*mem, g, s))
 }
 
 func NewDirectMessage(m discord.Message, s *Session) Message {
-	return NewMessage(m, s, NewUser(m.Author))
+	return NewMessage(m, s, NewUser(m.Author, s))
 }
 
 func NewMessage(m discord.Message, s *Session, author Author) Message {
+	// Render the message content.
+	var content = segments.ParseMessage(&m, s.Store)
+
+	// Request members in mentions if we're in a guild.
+	if m.GuildID.Valid() {
+		for _, segment := range content.Segments {
+			if mention, ok := segment.(*segments.MentionSegment); ok {
+				// If this is not a user mention, then skip.
+				if mention.GuildUser == nil {
+					continue
+				}
+
+				// If we already have a member, then skip. We could check this
+				// using the timestamp, as we might have a user set into the
+				// member field
+				if m := mention.GuildUser.Member; m != nil && m.Joined.Valid() {
+					continue
+				}
+
+				// Request the member.
+				s.MemberState.RequestMember(m.GuildID, mention.GuildUser.ID)
+			}
+		}
+	}
+
 	return Message{
 		messageHeader: newHeader(m),
 		author:        author,
-		content:       segments.ParseMessage(&m, s.Store),
+		content:       content,
 	}
 }
 

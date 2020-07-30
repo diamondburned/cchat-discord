@@ -227,7 +227,7 @@ func (ch *Channel) JoinServer(ctx context.Context, ct cchat.MessagesContainer) (
 						continue
 					}
 
-					ct.UpdateMessage(NewMessageUpdateAuthor(msg, member, *g))
+					ct.UpdateMessage(NewMessageUpdateAuthor(msg, member, *g, ch.session))
 				}
 			}
 		}))
@@ -472,7 +472,7 @@ func (ch *Channel) TypingSubscribe(ti cchat.TypingIndicator) (func(), error) {
 		if t.ChannelID != ch.id || t.UserID == ch.session.userID {
 			return
 		}
-		if typer, err := NewTyper(ch.session.Store, t); err == nil {
+		if typer, err := NewTyper(ch.session, t); err == nil {
 			ti.AddTyper(typer)
 		}
 	}), nil
