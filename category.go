@@ -40,7 +40,7 @@ func (c *Category) Name() text.Rich {
 	}
 
 	return text.Rich{
-		Content: "⯆ " + t.Name,
+		Content: t.Name,
 	}
 }
 
