@@ -32,7 +32,7 @@ func completionUserEntry(s *Session, u discord.User, g *discord.Guild) cchat.Com
 	}
 }
 
-func (ch *Channel) completeMentions(word string) (entries []cchat.CompletionEntry) {
+func (ch *SendableChannel) completeMentions(word string) (entries []cchat.CompletionEntry) {
 	// If there is no input, then we should grab the latest messages.
 	if word == "" {
 		msgs, _ := ch.messages()
@@ -120,7 +120,7 @@ func (ch *Channel) completeMentions(word string) (entries []cchat.CompletionEntr
 	return
 }
 
-func (ch *Channel) completeChannels(word string) (entries []cchat.CompletionEntry) {
+func (ch *SendableChannel) completeChannels(word string) (entries []cchat.CompletionEntry) {
 	// Ignore if empty word.
 	if word == "" {
 		return
@@ -164,7 +164,7 @@ func (ch *Channel) completeChannels(word string) (entries []cchat.CompletionEntr
 	return
 }
 
-func (ch *Channel) completeEmojis(word string) (entries []cchat.CompletionEntry) {
+func (ch *SendableChannel) completeEmojis(word string) (entries []cchat.CompletionEntry) {
 	// Ignore if empty word.
 	if word == "" {
 		return

@@ -175,7 +175,11 @@ func (g *Guild) Servers(container cchat.ServersContainer) error {
 		case discord.GuildCategory:
 			chs = append(chs, NewCategory(g.session, ch))
 		case discord.GuildText:
-			chs = append(chs, NewChannel(g.session, ch))
+			c, err := NewChannel(g.session, ch)
+			if err != nil {
+				return errors.Wrapf(err, "Failed to make channel %q: %v", ch.Name, err)
+			}
+			chs = append(chs, c)
 		}
 	}
 

@@ -59,7 +59,12 @@ func (c *Category) Servers(container cchat.ServersContainer) error {
 
 	var chv = make([]cchat.Server, len(chs))
 	for i := range chs {
-		chv[i] = NewChannel(c.session, chs[i])
+		c, err := NewChannel(c.session, chs[i])
+		if err != nil {
+			return errors.Wrapf(err, "Failed to make channel %s: %v", chs[i].Name, err)
+		}
+
+		chv[i] = c
 	}
 
 	container.SetServers(chv)

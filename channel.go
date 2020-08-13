@@ -5,7 +5,6 @@ import (
 	"sort"
 	"time"
 
-	"github.com/diamondburned/arikawa/api"
 	"github.com/diamondburned/arikawa/discord"
 	"github.com/diamondburned/arikawa/gateway"
 	"github.com/diamondburned/cchat"
@@ -67,19 +66,31 @@ type Channel struct {
 }
 
 var (
-	_ cchat.Server                        = (*Channel)(nil)
-	_ cchat.ServerMessage                 = (*Channel)(nil)
-	_ cchat.ServerMessageSender           = (*Channel)(nil)
-	_ cchat.ServerMessageAttachmentSender = (*Channel)(nil)
-	_ cchat.ServerMessageSendCompleter    = (*Channel)(nil)
-	_ cchat.ServerNickname                = (*Channel)(nil)
-	_ cchat.ServerMessageEditor           = (*Channel)(nil)
-	_ cchat.ServerMessageActioner         = (*Channel)(nil)
-	_ cchat.ServerMessageTypingIndicator  = (*Channel)(nil)
-	_ cchat.ServerMessageUnreadIndicator  = (*Channel)(nil)
+	_ cchat.Server                       = (*Channel)(nil)
+	_ cchat.ServerMessage                = (*Channel)(nil)
+	_ cchat.ServerNickname               = (*Channel)(nil)
+	_ cchat.ServerMessageEditor          = (*Channel)(nil)
+	_ cchat.ServerMessageActioner        = (*Channel)(nil)
+	_ cchat.ServerMessageTypingIndicator = (*Channel)(nil)
+	_ cchat.ServerMessageUnreadIndicator = (*Channel)(nil)
 )
 
-func NewChannel(s *Session, ch discord.Channel) *Channel {
+func NewChannel(s *Session, ch discord.Channel) (cchat.Server, error) {
+	p, err := s.Permissions(ch.ID, s.userID)
+	if err != nil {
+		return nil, errors.Wrap(err, "Failed to get permission")
+	}
+
+	var channel = NewROChannel(s, ch)
+	if p.Has(discord.PermissionSendMessages) {
+		return NewSendableChannel(channel), nil
+	}
+	return channel, nil
+}
+
+// NewROChannel creates a new read-only channel. This function is mainly used
+// internally.
+func NewROChannel(s *Session, ch discord.Channel) *Channel {
 	return &Channel{
 		id:      ch.ID,
 		guildID: ch.GuildID,
@@ -276,37 +287,6 @@ func (ch *Channel) JoinServer(ctx context.Context, ct cchat.MessagesContainer) (
 	return joinCancels(addcancel()), nil
 }
 
-func (ch *Channel) SendMessage(msg cchat.SendableMessage) error {
-	var send = api.SendMessageData{Content: msg.Content()}
-	if noncer, ok := msg.(cchat.MessageNonce); ok {
-		send.Nonce = noncer.Nonce()
-	}
-	if attcher, ok := msg.(cchat.SendableMessageAttachments); ok {
-		send.Files = addAttachments(attcher.Attachments())
-	}
-
-	_, err := ch.session.SendMessageComplex(ch.id, send)
-	return err
-}
-
-func (ch *Channel) SendAttachments(atts []cchat.MessageAttachment) error {
-	_, err := ch.session.SendMessageComplex(ch.id, api.SendMessageData{
-		Files: addAttachments(atts),
-	})
-	return err
-}
-
-func addAttachments(atts []cchat.MessageAttachment) []api.SendMessageFile {
-	var files = make([]api.SendMessageFile, len(atts))
-	for i, a := range atts {
-		files[i] = api.SendMessageFile{
-			Name:   a.Name,
-			Reader: a,
-		}
-	}
-	return files
-}
-
 // MessageEditable returns true if the given message ID belongs to the current
 // user.
 func (ch *Channel) MessageEditable(id string) bool {
@@ -432,29 +412,6 @@ func (ch *Channel) canManageMessages(userID discord.Snowflake) bool {
 	// The Manage Messages permission allows the user to delete others'
 	// messages, so we'll return true if that is the case.
 	return p.Has(discord.PermissionManageMessages)
-}
-
-// CompleteMessage implements message input completion capability for Discord.
-// This method supports user mentions, channel mentions and emojis.
-//
-// For the individual implementations, refer to channel_completion.go.
-func (ch *Channel) CompleteMessage(words []string, i int) (entries []cchat.CompletionEntry) {
-	var word = words[i]
-	// Word should have at least a character for the char check.
-	if len(word) < 1 {
-		return
-	}
-
-	switch word[0] {
-	case '@':
-		return ch.completeMentions(word[1:])
-	case '#':
-		return ch.completeChannels(word[1:])
-	case ':':
-		return ch.completeEmojis(word[1:])
-	}
-
-	return
 }
 
 func (ch *Channel) Typing() error {
