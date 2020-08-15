@@ -12,10 +12,10 @@ import (
 )
 
 type messageHeader struct {
-	id        discord.Snowflake
+	id        discord.MessageID
 	time      discord.Timestamp
-	channelID discord.Snowflake
-	guildID   discord.Snowflake
+	channelID discord.ChannelID
+	guildID   discord.GuildID
 	nonce     string
 }
 
@@ -29,7 +29,7 @@ func newHeader(msg discord.Message) messageHeader {
 		guildID:   msg.GuildID,
 		nonce:     msg.Nonce,
 	}
-	if msg.EditedTimestamp.Valid() {
+	if msg.EditedTimestamp.IsValid() {
 		h.time = msg.EditedTimestamp
 	}
 	return h
@@ -58,7 +58,7 @@ func AvatarURL(URL string) string {
 }
 
 type Author struct {
-	id     discord.Snowflake
+	id     discord.UserID
 	name   text.Rich
 	avatar string
 }
@@ -198,7 +198,7 @@ func NewMessageCreate(c *gateway.MessageCreateEvent, s *Session) Message {
 func NewBacklogMessage(m discord.Message, s *Session, g discord.Guild) Message {
 	// If the message doesn't have a guild, then we don't need all the
 	// complicated member fetching process.
-	if !m.GuildID.Valid() {
+	if !m.GuildID.IsValid() {
 		return NewMessage(m, s, NewUser(m.Author, s))
 	}
 
@@ -220,7 +220,7 @@ func NewMessage(m discord.Message, s *Session, author Author) Message {
 	var content = segments.ParseMessage(&m, s.Store)
 
 	// Request members in mentions if we're in a guild.
-	if m.GuildID.Valid() {
+	if m.GuildID.IsValid() {
 		for _, segment := range content.Segments {
 			if mention, ok := segment.(*segments.MentionSegment); ok {
 				// If this is not a user mention, then skip.
@@ -231,7 +231,7 @@ func NewMessage(m discord.Message, s *Session, author Author) Message {
 				// If we already have a member, then skip. We could check this
 				// using the timestamp, as we might have a user set into the
 				// member field
-				if m := mention.GuildUser.Member; m != nil && m.Joined.Valid() {
+				if m := mention.GuildUser.Member; m != nil && m.Joined.IsValid() {
 					continue
 				}
 
@@ -249,7 +249,7 @@ func NewMessage(m discord.Message, s *Session, author Author) Message {
 }
 
 func (m Message) Author() cchat.MessageAuthor {
-	if !m.author.id.Valid() {
+	if !m.author.id.IsValid() {
 		return nil
 	}
 	return m.author

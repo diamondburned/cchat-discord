@@ -72,7 +72,7 @@ func (Authenticator) Authenticate(form []string) (cchat.Session, error) {
 
 type Session struct {
 	*ningen.State
-	userID discord.Snowflake
+	userID discord.UserID
 }
 
 var (
@@ -168,7 +168,7 @@ func (s *Session) Servers(container cchat.ServersContainer) error {
 		for _, folder := range s.Ready.Settings.GuildFolders {
 			// TODO: correct.
 			switch {
-			case folder.ID.Valid():
+			case folder.ID > 0:
 				fallthrough
 			case len(folder.GuildIDs) > 1:
 				toplevels = append(toplevels, NewGuildFolder(s, folder))

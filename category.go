@@ -10,8 +10,8 @@ import (
 )
 
 type Category struct {
-	id      discord.Snowflake
-	guildID discord.Snowflake
+	id      discord.ChannelID
+	guildID discord.GuildID
 	session *Session
 }
 

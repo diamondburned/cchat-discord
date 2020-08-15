@@ -115,7 +115,7 @@ func (r *TextRenderer) renderEmbed(embed discord.Embed, m *discord.Message, s st
 		r.ensureBreak()
 	}
 
-	if embed.Timestamp.Valid() {
+	if embed.Timestamp.IsValid() {
 		if embed.Footer != nil {
 			r.buf.WriteString(" - ")
 		}

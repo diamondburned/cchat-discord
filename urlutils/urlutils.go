@@ -59,7 +59,7 @@ func ExtIs(URL string, exts []string) bool {
 }
 
 // AssetURL generates the image URL from the given asset image ID.
-func AssetURL(appID discord.Snowflake, imageID string) string {
+func AssetURL(appID discord.AppID, imageID string) string {
 	if strings.HasPrefix(imageID, "spotify:") {
 		return "https://i.scdn.co/image/" + strings.TrimPrefix(imageID, "spotify:")
 	}

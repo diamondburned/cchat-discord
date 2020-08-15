@@ -37,16 +37,16 @@ func filterAccessible(s *Session, chs []discord.Channel) []discord.Channel {
 	return filtered
 }
 
-func filterCategory(chs []discord.Channel, catID discord.Snowflake) []discord.Channel {
+func filterCategory(chs []discord.Channel, catID discord.ChannelID) []discord.Channel {
 	var filtered = chs[:0]
-	var catvalid = catID.Valid()
+	var catvalid = catID.IsValid()
 
 	for _, ch := range chs {
 		switch {
 		// If the given ID is not valid, then we look for channels with
 		// similarly invalid category IDs, because yes, Discord really sends
 		// inconsistent responses.
-		case !catvalid && !ch.CategoryID.Valid():
+		case !catvalid && !ch.CategoryID.IsValid():
 			fallthrough
 		// Basic comparison.
 		case ch.CategoryID == catID:
@@ -60,8 +60,8 @@ func filterCategory(chs []discord.Channel, catID discord.Snowflake) []discord.Ch
 }
 
 type Channel struct {
-	id      discord.Snowflake
-	guildID discord.Snowflake
+	id      discord.ChannelID
+	guildID discord.GuildID
 	session *Session
 }
 
@@ -109,7 +109,7 @@ func (ch *Channel) messages() ([]discord.Message, error) {
 }
 
 func (ch *Channel) guild() (*discord.Guild, error) {
-	if ch.guildID.Valid() {
+	if ch.guildID.IsValid() {
 		return ch.session.Guild(ch.guildID)
 	}
 	return nil, errors.New("channel not in a guild")
@@ -134,7 +134,7 @@ func (ch *Channel) Name() text.Rich {
 
 func (ch *Channel) Nickname(ctx context.Context, labeler cchat.LabelContainer) (func(), error) {
 	// We don't have a nickname if we're not in a guild.
-	if !ch.guildID.Valid() {
+	if !ch.guildID.IsValid() {
 		return func() {}, nil
 	}
 
@@ -199,7 +199,7 @@ func (ch *Channel) JoinServer(ctx context.Context, ct cchat.MessagesContainer) (
 
 	var constructor func(discord.Message) cchat.MessageCreate
 
-	if ch.guildID.Valid() {
+	if ch.guildID.IsValid() {
 		// Create the backlog without any member information.
 		g, err := state.Guild(ch.guildID)
 		if err != nil {
@@ -295,7 +295,7 @@ func (ch *Channel) MessageEditable(id string) bool {
 		return false
 	}
 
-	m, err := ch.session.Store.Message(ch.id, s)
+	m, err := ch.session.Store.Message(ch.id, discord.MessageID(s))
 	if err != nil {
 		return false
 	}
@@ -310,7 +310,7 @@ func (ch *Channel) RawMessageContent(id string) (string, error) {
 		return "", errors.Wrap(err, "Failed to parse ID")
 	}
 
-	m, err := ch.session.Store.Message(ch.id, s)
+	m, err := ch.session.Store.Message(ch.id, discord.MessageID(s))
 	if err != nil {
 		return "", errors.Wrap(err, "Failed to get the message")
 	}
@@ -325,7 +325,7 @@ func (ch *Channel) EditMessage(id, content string) error {
 		return errors.Wrap(err, "Failed to parse ID")
 	}
 
-	_, err = ch.session.EditText(ch.id, s, content)
+	_, err = ch.session.EditText(ch.id, discord.MessageID(s), content)
 	return err
 }
 
@@ -343,7 +343,7 @@ func (ch *Channel) DoMessageAction(action, id string) error {
 
 	switch action {
 	case ActionDelete:
-		return ch.session.DeleteMessage(ch.id, s)
+		return ch.session.DeleteMessage(ch.id, discord.MessageID(s))
 	default:
 		return ErrUnknownAction
 	}
@@ -355,7 +355,7 @@ func (ch *Channel) MessageActions(id string) []string {
 		return nil
 	}
 
-	m, err := ch.session.Store.Message(ch.id, s)
+	m, err := ch.session.Store.Message(ch.id, discord.MessageID(s))
 	if err != nil {
 		return nil
 	}
@@ -384,9 +384,9 @@ func (ch *Channel) MessageActions(id string) []string {
 
 // canManageMessages returns whether or not the user is allowed to manage
 // messages.
-func (ch *Channel) canManageMessages(userID discord.Snowflake) bool {
+func (ch *Channel) canManageMessages(userID discord.UserID) bool {
 	// If we're not in a guild, then clearly we cannot.
-	if !ch.guildID.Valid() {
+	if !ch.guildID.IsValid() {
 		return false
 	}
 
@@ -438,7 +438,7 @@ func (ch *Channel) TypingSubscribe(ti cchat.TypingIndicator) (func(), error) {
 // muted returns if this channel is muted. This includes the channel's category
 // and guild.
 func (ch *Channel) muted() bool {
-	return (ch.guildID.Valid() && ch.session.MutedState.Guild(ch.guildID, false)) ||
+	return (ch.guildID.IsValid() && ch.session.MutedState.Guild(ch.guildID, false)) ||
 		ch.session.MutedState.Channel(ch.id) ||
 		ch.session.MutedState.Category(ch.id)
 }

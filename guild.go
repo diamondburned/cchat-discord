@@ -3,6 +3,7 @@ package discord
 import (
 	"context"
 	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/diamondburned/arikawa/discord"
@@ -44,7 +45,7 @@ func NewGuildFolder(s *Session, gf gateway.GuildFolder) *GuildFolder {
 }
 
 func (gf *GuildFolder) ID() string {
-	return gf.GuildFolder.ID.String()
+	return strconv.FormatInt(int64(gf.GuildFolder.ID), 10)
 }
 
 func (gf *GuildFolder) Name() text.Rich {
@@ -80,7 +81,7 @@ func (gf *GuildFolder) Servers(container cchat.ServersContainer) error {
 }
 
 type Guild struct {
-	id      discord.Snowflake
+	id      discord.GuildID
 	session *Session
 }
 
@@ -97,7 +98,7 @@ func NewGuild(s *Session, g *discord.Guild) *Guild {
 	}
 }
 
-func NewGuildFromID(s *Session, gID discord.Snowflake) (*Guild, error) {
+func NewGuildFromID(s *Session, gID discord.GuildID) (*Guild, error) {
 	g, err := s.Guild(gID)
 	if err != nil {
 		return nil, err
@@ -156,7 +157,7 @@ func (g *Guild) Servers(container cchat.ServersContainer) error {
 	}
 
 	// Only get top-level channels (those with category ID being null).
-	var toplevels = filterAccessible(g.session, filterCategory(c, discord.NullSnowflake))
+	var toplevels = filterAccessible(g.session, filterCategory(c, 0))
 
 	// Sort so that positions are correct.
 	sort.SliceStable(toplevels, func(i, j int) bool {

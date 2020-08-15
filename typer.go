@@ -24,7 +24,7 @@ func NewTyperAuthor(author Author, ev *gateway.TypingStartEvent) Typer {
 }
 
 func NewTyper(s *Session, ev *gateway.TypingStartEvent) (*Typer, error) {
-	if ev.GuildID.Valid() {
+	if ev.GuildID.IsValid() {
 		g, err := s.Store.Guild(ev.GuildID)
 		if err != nil {
 			return nil, err

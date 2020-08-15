@@ -40,7 +40,7 @@ func (ch *SendableChannel) completeMentions(word string) (entries []cchat.Comple
 
 		// Keep track of the number of authors.
 		// TODO: fix excess allocations
-		var authors = make(map[discord.Snowflake]struct{}, MaxCompletion)
+		var authors = make(map[discord.UserID]struct{}, MaxCompletion)
 
 		for _, msg := range msgs {
 			// If we've already added the author into the list, then skip.
@@ -65,7 +65,7 @@ func (ch *SendableChannel) completeMentions(word string) (entries []cchat.Comple
 	var match = strings.ToLower(word)
 
 	// If we're not in a guild, then we can check the list of recipients.
-	if !ch.guildID.Valid() {
+	if !ch.guildID.IsValid() {
 		c, err := ch.self()
 		if err != nil {
 			return
@@ -127,7 +127,7 @@ func (ch *SendableChannel) completeChannels(word string) (entries []cchat.Comple
 	}
 
 	// Ignore if we're not in a guild.
-	if !ch.guildID.Valid() {
+	if !ch.guildID.IsValid() {
 		return
 	}
 
@@ -144,7 +144,7 @@ func (ch *SendableChannel) completeChannels(word string) (entries []cchat.Comple
 		}
 
 		var category string
-		if channel.CategoryID.Valid() {
+		if channel.CategoryID.IsValid() {
 			if c, _ := ch.session.Store.Channel(channel.CategoryID); c != nil {
 				category = c.Name
 			}

@@ -70,7 +70,7 @@ type MentionSegment struct {
 	*md.Mention
 
 	store state.Store
-	guild discord.Snowflake
+	guild discord.GuildID
 }
 
 var (
@@ -241,7 +241,7 @@ func userInfo(guild discord.Guild, member discord.Member, state *ningen.State) t
 	}
 
 	// Write extra information if any, but only if we have the guild state.
-	if len(member.RoleIDs) > 0 && guild.ID.Valid() {
+	if len(member.RoleIDs) > 0 && guild.ID.IsValid() {
 		// Write a prepended new line, as role writes will always prepend a new
 		// line. This is to prevent a trailing new line.
 		formatSectionf(&segment, &content, "Roles")
@@ -275,7 +275,7 @@ func userInfo(guild discord.Guild, member discord.Member, state *ningen.State) t
 				formatActivity(&segment, &content, ac)
 				content.WriteString("\n\n")
 			}
-		} else if guild.ID.Valid() {
+		} else if guild.ID.IsValid() {
 			// If we're still in a guild, then we can ask Discord for that
 			// member with their presence attached.
 			state.MemberState.RequestMember(guild.ID, member.User.ID)
@@ -312,6 +312,16 @@ func formatSectionf(segment *text.Rich, content *bytes.Buffer, f string, argv ..
 	segmentadd(segment, InlineSegment{start, end, text.AttrBold | text.AttrUnderline})
 }
 
+func FormatActivity(ac discord.Activity) text.Rich {
+	var rich text.Rich
+	var cbuf bytes.Buffer
+
+	formatActivity(&rich, &cbuf, ac)
+
+	rich.Content = cbuf.String()
+	return rich
+}
+
 func formatActivity(segment *text.Rich, content *bytes.Buffer, ac discord.Activity) {
 	switch ac.Type {
 	case discord.GameActivity:
@@ -331,7 +341,7 @@ func formatActivity(segment *text.Rich, content *bytes.Buffer, ac discord.Activi
 		content.WriteByte('\n')
 
 		if ac.Emoji != nil {
-			if !ac.Emoji.ID.Valid() {
+			if !ac.Emoji.ID.IsValid() {
 				content.WriteString(ac.Emoji.Name)
 			} else {
 				segmentadd(segment, EmojiSegment{
@@ -367,7 +377,10 @@ func formatActivity(segment *text.Rich, content *bytes.Buffer, ac discord.Activi
 	}
 }
 
-func getPresence(state *ningen.State, guildID, userID discord.Snowflake) *discord.Activity {
+func getPresence(
+	state *ningen.State,
+	guildID discord.GuildID, userID discord.UserID) *discord.Activity {
+
 	p, err := state.Presence(guildID, userID)
 	if err != nil {
 		return nil
@@ -380,7 +393,7 @@ func getPresence(state *ningen.State, guildID, userID discord.Snowflake) *discor
 	return p.Game
 }
 
-func findRole(roles []discord.Role, id discord.Snowflake) (discord.Role, bool) {
+func findRole(roles []discord.Role, id discord.RoleID) (discord.Role, bool) {
 	for _, role := range roles {
 		if role.ID == id {
 			return role, true
