@@ -110,7 +110,7 @@ func (ch *Channel) messages() ([]discord.Message, error) {
 
 func (ch *Channel) guild() (*discord.Guild, error) {
 	if ch.guildID.IsValid() {
-		return ch.session.Guild(ch.guildID)
+		return ch.session.Store.Guild(ch.guildID)
 	}
 	return nil, errors.New("channel not in a guild")
 }

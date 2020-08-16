@@ -12,10 +12,10 @@ const (
 )
 
 type EmojiSegment struct {
-	start    int
-	name     string
-	emojiURL string
-	large    bool
+	Start    int
+	Name     string
+	EmojiURL string
+	Large    bool
 }
 
 var _ text.Imager = (*EmojiSegment)(nil)
@@ -23,10 +23,10 @@ var _ text.Imager = (*EmojiSegment)(nil)
 func (r *TextRenderer) emoji(n *md.Emoji, enter bool) ast.WalkStatus {
 	if enter {
 		r.append(EmojiSegment{
-			start:    r.buf.Len(),
-			name:     n.Name,
-			large:    n.Large,
-			emojiURL: n.EmojiURL() + "&size=64",
+			Start:    r.buf.Len(),
+			Name:     n.Name,
+			Large:    n.Large,
+			EmojiURL: n.EmojiURL() + "&size=64",
 		})
 	}
 
@@ -34,22 +34,22 @@ func (r *TextRenderer) emoji(n *md.Emoji, enter bool) ast.WalkStatus {
 }
 
 func (e EmojiSegment) Bounds() (start, end int) {
-	return e.start, e.start
+	return e.Start, e.Start
 }
 
 func (e EmojiSegment) Image() string {
-	return e.emojiURL
+	return e.EmojiURL
 }
 
 // TODO: large emoji
 
 func (e EmojiSegment) ImageSize() (w, h int) {
-	if e.large {
+	if e.Large {
 		return LargeEmojiSize, LargeEmojiSize
 	}
 	return InlineEmojiSize, InlineEmojiSize
 }
 
 func (e EmojiSegment) ImageText() string {
-	return ":" + e.name + ":"
+	return ":" + e.Name + ":"
 }

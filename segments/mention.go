@@ -312,16 +312,6 @@ func formatSectionf(segment *text.Rich, content *bytes.Buffer, f string, argv ..
 	segmentadd(segment, InlineSegment{start, end, text.AttrBold | text.AttrUnderline})
 }
 
-func FormatActivity(ac discord.Activity) text.Rich {
-	var rich text.Rich
-	var cbuf bytes.Buffer
-
-	formatActivity(&rich, &cbuf, ac)
-
-	rich.Content = cbuf.String()
-	return rich
-}
-
 func formatActivity(segment *text.Rich, content *bytes.Buffer, ac discord.Activity) {
 	switch ac.Type {
 	case discord.GameActivity:
@@ -345,10 +335,10 @@ func formatActivity(segment *text.Rich, content *bytes.Buffer, ac discord.Activi
 				content.WriteString(ac.Emoji.Name)
 			} else {
 				segmentadd(segment, EmojiSegment{
-					start:    content.Len(),
-					name:     ac.Emoji.Name,
-					emojiURL: ac.Emoji.EmojiURL() + "&size=64",
-					large:    ac.State == "",
+					Start:    content.Len(),
+					Name:     ac.Emoji.Name,
+					EmojiURL: ac.Emoji.EmojiURL() + "&size=64",
+					Large:    ac.State == "",
 				})
 			}
 

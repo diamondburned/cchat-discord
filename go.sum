@@ -101,6 +101,14 @@ github.com/diamondburned/ningen v0.1.1-0.20200815192814-e630cb3debe2 h1:9GZLZhVl
 github.com/diamondburned/ningen v0.1.1-0.20200815192814-e630cb3debe2/go.mod h1:PIsJWdDhjgN9OiR+qrDPD8KGQ8UyFuRVrgs3Ewu6a3c=
 github.com/diamondburned/ningen v0.1.1-0.20200815214034-638820c48066 h1:TOLTl0zLJ+idYB7i6C4oGfmVF1Y0AFoNfVQWU3hmc4A=
 github.com/diamondburned/ningen v0.1.1-0.20200815214034-638820c48066/go.mod h1:PIsJWdDhjgN9OiR+qrDPD8KGQ8UyFuRVrgs3Ewu6a3c=
+github.com/diamondburned/ningen v0.1.1-0.20200816035718-70361fb41b6f h1:Wzns8I0VjMrcsH7N5lqHKTRkgBt2aCwx+7wAxvSFGjU=
+github.com/diamondburned/ningen v0.1.1-0.20200816035718-70361fb41b6f/go.mod h1:PIsJWdDhjgN9OiR+qrDPD8KGQ8UyFuRVrgs3Ewu6a3c=
+github.com/diamondburned/ningen v0.1.1-0.20200816040753-9595e584e6bc h1:pxFVcg7J7D9hYVVReXLdJurgv4uAo1a6jNHcYpdeZsE=
+github.com/diamondburned/ningen v0.1.1-0.20200816040753-9595e584e6bc/go.mod h1:PIsJWdDhjgN9OiR+qrDPD8KGQ8UyFuRVrgs3Ewu6a3c=
+github.com/diamondburned/ningen v0.1.1-0.20200816040956-857988325ce0 h1:c3G8NjcS7JZvQvY549r993C0P1ltEf7sFpfRD21HFhk=
+github.com/diamondburned/ningen v0.1.1-0.20200816040956-857988325ce0/go.mod h1:PIsJWdDhjgN9OiR+qrDPD8KGQ8UyFuRVrgs3Ewu6a3c=
+github.com/diamondburned/ningen v0.1.1-0.20200816192443-0b6a02d498d2 h1:PodX8lfv7ZffUHUsaQUdIjZ50ONY8uCCXXUL7yzoSMQ=
+github.com/diamondburned/ningen v0.1.1-0.20200816192443-0b6a02d498d2/go.mod h1:PIsJWdDhjgN9OiR+qrDPD8KGQ8UyFuRVrgs3Ewu6a3c=
 github.com/dustin/go-humanize v1.0.0 h1:VSnTsYCnlFHaM2/igO1h6X3HA71jcobQuxemgkq4zYo=
 github.com/dustin/go-humanize v1.0.0/go.mod h1:HtrtbFcZ19U5GC7JDqmcUSB87Iq5E25KnS6fMYU6eOk=
 github.com/envoyproxy/go-control-plane v0.9.1-0.20191026205805-5f8ba28d4473/go.mod h1:YTl/9mNaCwkRvm6d1a2C3ymFceY/DCBVvsKhRF0iEA4=
