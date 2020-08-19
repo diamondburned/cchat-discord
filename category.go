@@ -28,7 +28,7 @@ func NewCategory(s *Session, ch discord.Channel) *Category {
 	}
 }
 
-func (c *Category) ID() string {
+func (c *Category) ID() cchat.ID {
 	return c.id.String()
 }
 

@@ -44,7 +44,7 @@ func NewGuildFolder(s *Session, gf gateway.GuildFolder) *GuildFolder {
 	}
 }
 
-func (gf *GuildFolder) ID() string {
+func (gf *GuildFolder) ID() cchat.ID {
 	return strconv.FormatInt(int64(gf.GuildFolder.ID), 10)
 }
 
@@ -115,7 +115,7 @@ func (g *Guild) selfState() (*discord.Guild, error) {
 	return g.session.Store.Guild(g.id)
 }
 
-func (g *Guild) ID() string {
+func (g *Guild) ID() cchat.ID {
 	return g.id.String()
 }
 

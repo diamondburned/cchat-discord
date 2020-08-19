@@ -71,6 +71,7 @@ var (
 	_ cchat.ServerNickname               = (*Channel)(nil)
 	_ cchat.ServerMessageEditor          = (*Channel)(nil)
 	_ cchat.ServerMessageActioner        = (*Channel)(nil)
+	_ cchat.ServerMessageBacklogger      = (*Channel)(nil)
 	_ cchat.ServerMessageTypingIndicator = (*Channel)(nil)
 	_ cchat.ServerMessageUnreadIndicator = (*Channel)(nil)
 )
@@ -115,7 +116,7 @@ func (ch *Channel) guild() (*discord.Guild, error) {
 	return nil, errors.New("channel not in a guild")
 }
 
-func (ch *Channel) ID() string {
+func (ch *Channel) ID() cchat.ID {
 	return ch.id.String()
 }
 
@@ -285,6 +286,32 @@ func (ch *Channel) JoinServer(ctx context.Context, ct cchat.MessagesContainer) (
 	)
 
 	return joinCancels(addcancel()), nil
+}
+
+func (ch *Channel) MessagesBefore(ctx context.Context, b cchat.ID, c cchat.MessagePrepender) error {
+	p, err := discord.ParseSnowflake(b)
+	if err != nil {
+		return errors.Wrap(err, "Failed to parse snowflake")
+	}
+
+	s := ch.session.WithContext(ctx)
+
+	m, err := s.MessagesBefore(ch.id, discord.MessageID(p), uint(ch.session.MaxMessages()))
+	if err != nil {
+		return errors.Wrap(err, "Failed to get messages")
+	}
+
+	// Create the backlog without any member information.
+	g, err := s.Guild(ch.guildID)
+	if err != nil {
+		return errors.Wrap(err, "Failed to get guild")
+	}
+
+	for _, m := range m {
+		c.PrependMessage(NewBacklogMessage(m, ch.session, *g))
+	}
+
+	return nil
 }
 
 // MessageEditable returns true if the given message ID belongs to the current

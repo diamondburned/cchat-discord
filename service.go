@@ -117,7 +117,7 @@ func NewSession(s *state.State) (*Session, error) {
 	}, nil
 }
 
-func (s *Session) ID() string {
+func (s *Session) ID() cchat.ID {
 	return s.userID.String()
 }
 

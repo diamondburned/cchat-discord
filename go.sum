@@ -67,6 +67,8 @@ github.com/diamondburned/cchat v0.0.47 h1:qU2TNeXlqru8za4qAgMPWTw6k8HGGOyic08GPP
 github.com/diamondburned/cchat v0.0.47/go.mod h1:+zXktogE45A0om4fT6B/z6Ii7FXNafjxsNspI0rlhbU=
 github.com/diamondburned/cchat v0.0.48 h1:MAzGzKY20JBh/LnirOZVPwbMq07xfqu4Lb4XsV9/sXQ=
 github.com/diamondburned/cchat v0.0.48/go.mod h1:+zXktogE45A0om4fT6B/z6Ii7FXNafjxsNspI0rlhbU=
+github.com/diamondburned/cchat v0.0.49 h1:zP6QvjdRU3UqDZt3rEqjkR/5M68XRVms7htHfE9tLOc=
+github.com/diamondburned/cchat v0.0.49/go.mod h1:+zXktogE45A0om4fT6B/z6Ii7FXNafjxsNspI0rlhbU=
 github.com/diamondburned/ningen v0.1.1-0.20200621014632-6babb812b249 h1:yP7kJ+xCGpDz6XbcfACJcju4SH1XDPwlrvbofz3lP8I=
 github.com/diamondburned/ningen v0.1.1-0.20200621014632-6babb812b249/go.mod h1:xW9hpBZsGi8KpAh10TyP+YQlYBo+Xc+2w4TR6N0951A=
 github.com/diamondburned/ningen v0.1.1-0.20200708085949-b64e350f3b8c h1:3h/kyk6HplYZF3zLi106itjYJWjbuMK/twijeGLEy2M=

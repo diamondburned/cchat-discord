@@ -44,7 +44,7 @@ func NewHeaderDelete(d *gateway.MessageDeleteEvent) messageHeader {
 	}
 }
 
-func (m messageHeader) ID() string {
+func (m messageHeader) ID() cchat.ID {
 	return m.id.String()
 }
 
@@ -125,7 +125,7 @@ func RenderMemberName(m discord.Member, g discord.Guild, s *Session) text.Rich {
 	return name
 }
 
-func (a Author) ID() string {
+func (a Author) ID() cchat.ID {
 	return a.id.String()
 }
 

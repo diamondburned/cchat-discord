@@ -135,7 +135,7 @@ func NewListMember(ch *Channel, it gateway.GuildMemberListOpItem) *ListMember {
 	}
 }
 
-func (l *ListMember) ID() string {
+func (l *ListMember) ID() cchat.ID {
 	return l.userID.String()
 }
 
@@ -305,7 +305,7 @@ func NewListSection(listID string, ch *Channel, group gateway.GuildMemberListGro
 	}
 }
 
-func (s *ListSection) ID() string {
+func (s *ListSection) ID() cchat.ID {
 	return s.id
 	// return fmt.Sprintf("%s-%s", s.listID, s.name)
 }
