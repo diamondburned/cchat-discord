@@ -308,6 +308,9 @@ func (ch *Channel) MessagesBefore(ctx context.Context, b cchat.ID, c cchat.Messa
 	}
 
 	for _, m := range m {
+		// Discord sucks.
+		m.GuildID = ch.guildID
+
 		c.PrependMessage(NewBacklogMessage(m, ch.session, *g))
 	}
 
