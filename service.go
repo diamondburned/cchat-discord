@@ -6,6 +6,7 @@ import (
 
 	"github.com/diamondburned/arikawa/discord"
 	"github.com/diamondburned/arikawa/gateway"
+	"github.com/diamondburned/arikawa/session"
 	"github.com/diamondburned/arikawa/state"
 	"github.com/diamondburned/arikawa/utils/httputil/httpdriver"
 	"github.com/diamondburned/cchat"
@@ -107,7 +108,7 @@ func NewSession(s *state.State) (*Session, error) {
 		return nil
 	})
 
-	if err := s.Open(); err != nil {
+	if err := n.Open(); err != nil {
 		return nil, err
 	}
 
@@ -159,6 +160,20 @@ func (s *Session) Save() (map[string]string, error) {
 }
 
 func (s *Session) Servers(container cchat.ServersContainer) error {
+	// Reset the entire container when the session is closed.
+	s.AddHandler(func(*session.Closed) {
+		container.SetServers(nil)
+	})
+
+	// Set the entire container again once reconnected.
+	s.AddHandler(func(*ningen.Connected) {
+		s.servers(container)
+	})
+
+	return s.servers(container)
+}
+
+func (s *Session) servers(container cchat.ServersContainer) error {
 	switch {
 	// If the user has guild folders:
 	case len(s.Ready.Settings.GuildFolders) > 0:
