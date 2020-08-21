@@ -65,15 +65,15 @@ func (gf *GuildFolder) Name() text.Rich {
 }
 
 func (gf *GuildFolder) Servers(container cchat.ServersContainer) error {
-	var servers = make([]cchat.Server, len(gf.GuildIDs))
+	var servers = make([]cchat.Server, 0, len(gf.GuildIDs))
 
-	for i, id := range gf.GuildIDs {
+	for _, id := range gf.GuildIDs {
 		g, err := gf.session.Guild(id)
 		if err != nil {
 			continue
 		}
 
-		servers[i] = NewGuild(gf.session, g)
+		servers = append(servers, NewGuild(gf.session, g))
 	}
 
 	container.SetServers(servers)
