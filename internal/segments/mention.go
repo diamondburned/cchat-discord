@@ -7,7 +7,7 @@ import (
 
 	"github.com/diamondburned/arikawa/discord"
 	"github.com/diamondburned/arikawa/state"
-	"github.com/diamondburned/cchat-discord/urlutils"
+	"github.com/diamondburned/cchat-discord/internal/urlutils"
 	"github.com/diamondburned/cchat/text"
 	"github.com/diamondburned/ningen"
 	"github.com/diamondburned/ningen/md"

@@ -1,4 +1,4 @@
-package discord
+package message
 
 import (
 	"time"
@@ -6,8 +6,8 @@ import (
 	"github.com/diamondburned/arikawa/discord"
 	"github.com/diamondburned/arikawa/gateway"
 	"github.com/diamondburned/cchat"
-	"github.com/diamondburned/cchat-discord/segments"
-	"github.com/diamondburned/cchat-discord/urlutils"
+	"github.com/diamondburned/cchat-discord/internal/discord/state"
+	"github.com/diamondburned/cchat-discord/internal/segments"
 	"github.com/diamondburned/cchat/text"
 )
 
@@ -52,91 +52,6 @@ func (m messageHeader) Time() time.Time {
 	return m.time.Time()
 }
 
-// AvatarURL wraps the URL with URL queries for the avatar.
-func AvatarURL(URL string) string {
-	return urlutils.AvatarURL(URL)
-}
-
-type Author struct {
-	id     discord.UserID
-	name   text.Rich
-	avatar string
-}
-
-func NewUser(u discord.User, s *Session) Author {
-	var name = text.Rich{Content: u.Username}
-	if u.Bot {
-		name.Content += " "
-		name.Segments = append(name.Segments,
-			segments.NewBlurpleSegment(segments.Write(&name, "[BOT]")),
-		)
-	}
-
-	// Append a clickable user popup.
-	useg := segments.UserSegment(0, len(name.Content), u)
-	useg.WithState(s.State)
-	name.Segments = append(name.Segments, useg)
-
-	return Author{
-		id:     u.ID,
-		name:   name,
-		avatar: AvatarURL(u.AvatarURL()),
-	}
-}
-
-func NewGuildMember(m discord.Member, g discord.Guild, s *Session) Author {
-	return Author{
-		id:     m.User.ID,
-		name:   RenderMemberName(m, g, s),
-		avatar: AvatarURL(m.User.AvatarURL()),
-	}
-}
-
-func RenderMemberName(m discord.Member, g discord.Guild, s *Session) text.Rich {
-	var name = text.Rich{
-		Content: m.User.Username,
-	}
-
-	// Update the nickname.
-	if m.Nick != "" {
-		name.Content = m.Nick
-	}
-
-	// Update the color.
-	if c := discord.MemberColor(g, m); c > 0 {
-		name.Segments = append(name.Segments,
-			segments.NewColored(len(name.Content), c.Uint32()),
-		)
-	}
-
-	// Append the bot prefix if the user is a bot.
-	if m.User.Bot {
-		name.Content += " "
-		name.Segments = append(name.Segments,
-			segments.NewBlurpleSegment(segments.Write(&name, "[BOT]")),
-		)
-	}
-
-	// Append a clickable user popup.
-	useg := segments.MemberSegment(0, len(name.Content), g, m)
-	useg.WithState(s.State)
-	name.Segments = append(name.Segments, useg)
-
-	return name
-}
-
-func (a Author) ID() cchat.ID {
-	return a.id.String()
-}
-
-func (a Author) Name() text.Rich {
-	return a.name
-}
-
-func (a Author) Avatar() string {
-	return a.avatar
-}
-
 type Message struct {
 	messageHeader
 
@@ -147,7 +62,7 @@ type Message struct {
 	mentioned bool
 }
 
-func NewMessageUpdateContent(msg discord.Message, s *Session) Message {
+func NewMessageUpdateContent(msg discord.Message, s *state.Instance) Message {
 	// Check if content is empty.
 	if msg.Content == "" {
 		// Then grab the content from the state.
@@ -164,7 +79,7 @@ func NewMessageUpdateContent(msg discord.Message, s *Session) Message {
 }
 
 func NewMessageUpdateAuthor(
-	msg discord.Message, member discord.Member, g discord.Guild, s *Session) Message {
+	msg discord.Message, member discord.Member, g discord.Guild, s *state.Instance) Message {
 
 	return Message{
 		messageHeader: newHeader(msg),
@@ -174,7 +89,7 @@ func NewMessageUpdateAuthor(
 
 // NewMessageCreate uses the session to create a message. It does not do
 // API calls. Member is optional.
-func NewMessageCreate(c *gateway.MessageCreateEvent, s *Session) Message {
+func NewMessageCreate(c *gateway.MessageCreateEvent, s *state.Instance) Message {
 	// This should not error.
 	g, err := s.Store.Guild(c.GuildID)
 	if err != nil {
@@ -195,7 +110,7 @@ func NewMessageCreate(c *gateway.MessageCreateEvent, s *Session) Message {
 // NewBacklogMessage uses the session to create a message fetched from the
 // backlog. It takes in an existing guild and tries to fetch a new member, if
 // it's nil.
-func NewBacklogMessage(m discord.Message, s *Session, g discord.Guild) Message {
+func NewBacklogMessage(m discord.Message, s *state.Instance, g discord.Guild) Message {
 	// If the message doesn't have a guild, then we don't need all the
 	// complicated member fetching process.
 	if !m.GuildID.IsValid() {
@@ -211,11 +126,11 @@ func NewBacklogMessage(m discord.Message, s *Session, g discord.Guild) Message {
 	return NewMessage(m, s, NewGuildMember(*mem, g, s))
 }
 
-func NewDirectMessage(m discord.Message, s *Session) Message {
+func NewDirectMessage(m discord.Message, s *state.Instance) Message {
 	return NewMessage(m, s, NewUser(m.Author, s))
 }
 
-func NewMessage(m discord.Message, s *Session, author Author) Message {
+func NewMessage(m discord.Message, s *state.Instance, author Author) Message {
 	// Render the message content.
 	var content = segments.ParseMessage(&m, s.Store)
 
@@ -248,7 +163,7 @@ func NewMessage(m discord.Message, s *Session, author Author) Message {
 	}
 }
 
-func (m Message) Author() cchat.MessageAuthor {
+func (m Message) Author() cchat.Author {
 	if !m.author.id.IsValid() {
 		return nil
 	}

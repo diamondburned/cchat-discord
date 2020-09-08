@@ -1,29 +1,31 @@
-package discord
+package typer
 
 import (
+	"errors"
 	"time"
 
 	"github.com/diamondburned/arikawa/discord"
 	"github.com/diamondburned/arikawa/gateway"
 	"github.com/diamondburned/cchat"
-	"github.com/pkg/errors"
+	"github.com/diamondburned/cchat-discord/internal/discord/message"
+	"github.com/diamondburned/cchat-discord/internal/discord/state"
 )
 
 type Typer struct {
-	Author
+	message.Author
 	time discord.UnixTimestamp
 }
 
 var _ cchat.Typer = (*Typer)(nil)
 
-func NewTyperAuthor(author Author, ev *gateway.TypingStartEvent) Typer {
+func NewFromAuthor(author message.Author, ev *gateway.TypingStartEvent) Typer {
 	return Typer{
 		Author: author,
 		time:   ev.Timestamp,
 	}
 }
 
-func NewTyper(s *Session, ev *gateway.TypingStartEvent) (*Typer, error) {
+func New(s *state.Instance, ev *gateway.TypingStartEvent) (*Typer, error) {
 	if ev.GuildID.IsValid() {
 		g, err := s.Store.Guild(ev.GuildID)
 		if err != nil {
@@ -38,7 +40,7 @@ func NewTyper(s *Session, ev *gateway.TypingStartEvent) (*Typer, error) {
 		}
 
 		return &Typer{
-			Author: NewGuildMember(*ev.Member, *g, s),
+			Author: message.NewGuildMember(*ev.Member, *g, s),
 			time:   ev.Timestamp,
 		}, nil
 	}
@@ -51,7 +53,7 @@ func NewTyper(s *Session, ev *gateway.TypingStartEvent) (*Typer, error) {
 	for _, user := range c.DMRecipients {
 		if user.ID == ev.UserID {
 			return &Typer{
-				Author: NewUser(user, s),
+				Author: message.NewUser(user, s),
 				time:   ev.Timestamp,
 			}, nil
 		}

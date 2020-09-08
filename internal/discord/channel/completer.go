@@ -1,23 +1,61 @@
-package discord
+package channel
 
 import (
 	"strings"
 
 	"github.com/diamondburned/arikawa/discord"
 	"github.com/diamondburned/cchat"
-	"github.com/diamondburned/cchat-discord/urlutils"
+	"github.com/diamondburned/cchat-discord/internal/discord/message"
+	"github.com/diamondburned/cchat-discord/internal/discord/state"
+	"github.com/diamondburned/cchat-discord/internal/urlutils"
 	"github.com/diamondburned/cchat/text"
 )
 
 const MaxCompletion = 15
 
-func completionUserEntry(s *Session, u discord.User, g *discord.Guild) cchat.CompletionEntry {
+var _ cchat.MessageCompleter = (*Channel)(nil)
+
+// IsMessageCompleter returns true if the user can send messages in this
+// channel.
+func (ch *Channel) IsMessageCompleter() bool {
+	p, err := ch.state.StateOnly().Permissions(ch.id, ch.state.UserID)
+	if err != nil {
+		return false
+	}
+
+	return p.Has(discord.PermissionSendMessages)
+}
+
+// CompleteMessage implements message input completion capability for Discord.
+// This method supports user mentions, channel mentions and emojis.
+//
+// For the individual implementations, refer to channel_completion.go.
+func (ch *Channel) CompleteMessage(words []string, i int) (entries []cchat.CompletionEntry) {
+	var word = words[i]
+	// Word should have at least a character for the char check.
+	if len(word) < 1 {
+		return
+	}
+
+	switch word[0] {
+	case '@':
+		return ch.completeMentions(word[1:])
+	case '#':
+		return ch.completeChannels(word[1:])
+	case ':':
+		return ch.completeEmojis(word[1:])
+	}
+
+	return
+}
+
+func completionUser(s *state.Instance, u discord.User, g *discord.Guild) cchat.CompletionEntry {
 	if g != nil {
 		m, err := s.Store.Member(g.ID, u.ID)
 		if err == nil {
 			return cchat.CompletionEntry{
 				Raw:       u.Mention(),
-				Text:      RenderMemberName(*m, *g, s),
+				Text:      message.RenderMemberName(*m, *g, s),
 				Secondary: text.Rich{Content: u.Username + "#" + u.Discriminator},
 				IconURL:   u.AvatarURL(),
 			}
@@ -32,7 +70,7 @@ func completionUserEntry(s *Session, u discord.User, g *discord.Guild) cchat.Com
 	}
 }
 
-func (ch *SendableChannel) completeMentions(word string) (entries []cchat.CompletionEntry) {
+func (ch *Channel) completeMentions(word string) (entries []cchat.CompletionEntry) {
 	// If there is no input, then we should grab the latest messages.
 	if word == "" {
 		msgs, _ := ch.messages()
@@ -50,7 +88,7 @@ func (ch *SendableChannel) completeMentions(word string) (entries []cchat.Comple
 
 			// Record the current author and add the entry to the list.
 			authors[msg.Author.ID] = struct{}{}
-			entries = append(entries, completionUserEntry(ch.session, msg.Author, g))
+			entries = append(entries, completionUser(ch.state, msg.Author, g))
 
 			if len(entries) >= MaxCompletion {
 				return
@@ -89,7 +127,7 @@ func (ch *SendableChannel) completeMentions(word string) (entries []cchat.Comple
 	}
 
 	// If we're in a guild, then we should search for (all) members.
-	m, merr := ch.session.Store.Members(ch.guildID)
+	m, merr := ch.state.Store.Members(ch.guildID)
 	g, gerr := ch.guild()
 
 	if merr != nil || gerr != nil {
@@ -99,7 +137,7 @@ func (ch *SendableChannel) completeMentions(word string) (entries []cchat.Comple
 	// If we couldn't find any members, then we can request Discord to
 	// search for them.
 	if len(m) == 0 {
-		ch.session.MemberState.SearchMember(ch.guildID, word)
+		ch.state.MemberState.SearchMember(ch.guildID, word)
 		return
 	}
 
@@ -107,7 +145,7 @@ func (ch *SendableChannel) completeMentions(word string) (entries []cchat.Comple
 		if contains(match, mem.User.Username, mem.Nick) {
 			entries = append(entries, cchat.CompletionEntry{
 				Raw:       mem.User.Mention(),
-				Text:      RenderMemberName(mem, *g, ch.session),
+				Text:      message.RenderMemberName(mem, *g, ch.state),
 				Secondary: text.Rich{Content: mem.User.Username + "#" + mem.User.Discriminator},
 				IconURL:   mem.User.AvatarURL(),
 			})
@@ -120,7 +158,7 @@ func (ch *SendableChannel) completeMentions(word string) (entries []cchat.Comple
 	return
 }
 
-func (ch *SendableChannel) completeChannels(word string) (entries []cchat.CompletionEntry) {
+func (ch *Channel) completeChannels(word string) (entries []cchat.CompletionEntry) {
 	// Ignore if empty word.
 	if word == "" {
 		return
@@ -131,7 +169,7 @@ func (ch *SendableChannel) completeChannels(word string) (entries []cchat.Comple
 		return
 	}
 
-	c, err := ch.session.State.Channels(ch.guildID)
+	c, err := ch.state.State.Channels(ch.guildID)
 	if err != nil {
 		return
 	}
@@ -145,7 +183,7 @@ func (ch *SendableChannel) completeChannels(word string) (entries []cchat.Comple
 
 		var category string
 		if channel.CategoryID.IsValid() {
-			if c, _ := ch.session.Store.Channel(channel.CategoryID); c != nil {
+			if c, _ := ch.state.Store.Channel(channel.CategoryID); c != nil {
 				category = c.Name
 			}
 		}
@@ -164,13 +202,13 @@ func (ch *SendableChannel) completeChannels(word string) (entries []cchat.Comple
 	return
 }
 
-func (ch *SendableChannel) completeEmojis(word string) (entries []cchat.CompletionEntry) {
+func (ch *Channel) completeEmojis(word string) (entries []cchat.CompletionEntry) {
 	// Ignore if empty word.
 	if word == "" {
 		return
 	}
 
-	e, err := ch.session.EmojiState.Get(ch.guildID)
+	e, err := ch.state.EmojiState.Get(ch.guildID)
 	if err != nil {
 		return
 	}

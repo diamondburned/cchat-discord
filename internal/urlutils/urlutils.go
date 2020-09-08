@@ -16,6 +16,10 @@ func AvatarURL(URL string) string {
 
 // Sized wraps the URL with the size query.
 func Sized(URL string, size int) string {
+	if URL == "" {
+		return ""
+	}
+
 	u, err := url.Parse(URL)
 	if err != nil {
 		return URL
