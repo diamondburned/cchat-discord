@@ -62,6 +62,13 @@ type Message struct {
 	mentioned bool
 }
 
+var (
+	_ cchat.MessageCreate = (*Message)(nil)
+	_ cchat.MessageUpdate = (*Message)(nil)
+	_ cchat.MessageDelete = (*Message)(nil)
+	_ cchat.Noncer        = (*Message)(nil)
+)
+
 func NewMessageUpdateContent(msg discord.Message, s *state.Instance) Message {
 	// Check if content is empty.
 	if msg.Content == "" {

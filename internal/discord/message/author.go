@@ -15,6 +15,8 @@ type Author struct {
 	avatar string
 }
 
+var _ cchat.Author = (*Author)(nil)
+
 func NewUser(u discord.User, s *state.Instance) Author {
 	var name = text.Rich{Content: u.Username}
 	if u.Bot {
