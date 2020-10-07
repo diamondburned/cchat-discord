@@ -6,8 +6,10 @@ import (
 	"log"
 
 	"github.com/diamondburned/arikawa/discord"
+	"github.com/diamondburned/arikawa/session"
 	"github.com/diamondburned/arikawa/state"
 	"github.com/diamondburned/arikawa/utils/httputil/httpdriver"
+	"github.com/diamondburned/cchat"
 	"github.com/diamondburned/ningen"
 	"github.com/pkg/errors"
 )
@@ -17,6 +19,22 @@ type Instance struct {
 	UserID discord.UserID
 }
 
+var (
+	_ cchat.SessionSaver = (*Instance)(nil)
+)
+
+// ErrInvalidSession is returned if SessionRestore is given a bad session.
+var ErrInvalidSession = errors.New("invalid session")
+
+func NewFromData(data map[string]string) (*Instance, error) {
+	tk, ok := data["token"]
+	if !ok {
+		return nil, ErrInvalidSession
+	}
+
+	return NewFromToken(tk)
+}
+
 func NewFromToken(token string) (*Instance, error) {
 	s, err := state.New(token)
 	if err != nil {
@@ -24,6 +42,16 @@ func NewFromToken(token string) (*Instance, error) {
 	}
 
 	return New(s)
+}
+
+func Login(email, password, mfa string) (*Instance, error) {
+	session, err := session.Login(email, password, mfa)
+	if err != nil {
+		return nil, err
+	}
+
+	state, _ := state.NewFromSession(session, state.NewDefaultStore(nil))
+	return New(state)
 }
 
 func New(s *state.State) (*Instance, error) {
@@ -59,4 +87,10 @@ func (s *Instance) StateOnly() *state.State {
 	cancel()
 
 	return s.WithContext(ctx)
+}
+
+func (s *Instance) SaveSession() map[string]string {
+	return map[string]string{
+		"token": s.Token,
+	}
 }

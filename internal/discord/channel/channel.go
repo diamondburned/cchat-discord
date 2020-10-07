@@ -3,15 +3,17 @@ package channel
 import (
 	"github.com/diamondburned/arikawa/discord"
 	"github.com/diamondburned/cchat"
+	"github.com/diamondburned/cchat-discord/internal/discord/channel/message"
+	"github.com/diamondburned/cchat-discord/internal/discord/channel/shared"
 	"github.com/diamondburned/cchat-discord/internal/discord/state"
 	"github.com/diamondburned/cchat/text"
+	"github.com/diamondburned/cchat/utils/empty"
 	"github.com/pkg/errors"
 )
 
 type Channel struct {
-	id      discord.ChannelID
-	guildID discord.GuildID
-	state   *state.Instance
+	*empty.Server
+	*shared.Channel
 }
 
 var _ cchat.Server = (*Channel)(nil)
@@ -23,38 +25,40 @@ func New(s *state.Instance, ch discord.Channel) (cchat.Server, error) {
 		return nil, errors.Wrap(err, "Failed to get permission")
 	}
 
-	return &Channel{
-		id:      ch.ID,
-		guildID: ch.GuildID,
-		state:   s,
+	return Channel{
+		Channel: &shared.Channel{
+			ID:      ch.ID,
+			GuildID: ch.GuildID,
+			State:   s,
+		},
 	}, nil
 }
 
 // self does not do IO.
-func (ch *Channel) self() (*discord.Channel, error) {
-	return ch.state.Store.Channel(ch.id)
+func (ch Channel) self() (*discord.Channel, error) {
+	return ch.State.Store.Channel(ch.Channel.ID)
 }
 
 // messages does not do IO.
-func (ch *Channel) messages() ([]discord.Message, error) {
-	return ch.state.Store.Messages(ch.id)
+func (ch Channel) messages() ([]discord.Message, error) {
+	return ch.State.Store.Messages(ch.Channel.ID)
 }
 
-func (ch *Channel) guild() (*discord.Guild, error) {
-	if ch.guildID.IsValid() {
-		return ch.state.Store.Guild(ch.guildID)
+func (ch Channel) guild() (*discord.Guild, error) {
+	if ch.GuildID.IsValid() {
+		return ch.State.Store.Guild(ch.GuildID)
 	}
 	return nil, errors.New("channel not in a guild")
 }
 
-func (ch *Channel) ID() cchat.ID {
-	return ch.id.String()
+func (ch Channel) ID() cchat.ID {
+	return ch.Channel.ID.String()
 }
 
-func (ch *Channel) Name() text.Rich {
+func (ch Channel) Name() text.Rich {
 	c, err := ch.self()
 	if err != nil {
-		return text.Rich{Content: ch.id.String()}
+		return text.Rich{Content: ch.Channel.ID.String()}
 	}
 
 	if c.NSFW {
@@ -62,4 +66,12 @@ func (ch *Channel) Name() text.Rich {
 	} else {
 		return text.Rich{Content: "#" + c.Name}
 	}
+}
+
+func (ch Channel) AsMessenger() cchat.Messenger {
+	if !ch.HasPermission(discord.PermissionViewChannel) {
+		return nil
+	}
+
+	return message.New(ch.Channel)
 }

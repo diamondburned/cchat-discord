@@ -8,29 +8,24 @@ import (
 	"github.com/diamondburned/arikawa/discord"
 	"github.com/diamondburned/arikawa/gateway"
 	"github.com/diamondburned/cchat"
-	"github.com/diamondburned/cchat-discord/internal/discord/state"
-	"github.com/diamondburned/cchat-discord/internal/segments"
+	"github.com/diamondburned/cchat-discord/internal/discord/channel/shared"
+	"github.com/diamondburned/cchat-discord/internal/segments/colored"
+	"github.com/diamondburned/cchat-discord/internal/segments/emoji"
+	"github.com/diamondburned/cchat-discord/internal/segments/mention"
 	"github.com/diamondburned/cchat-discord/internal/urlutils"
 	"github.com/diamondburned/cchat/text"
 )
 
 type Member struct {
-	Channel
-	state *state.Instance
-
+	channel  *shared.Channel
 	userID   discord.UserID
 	origName string // use if cache is stale
 }
 
-var (
-	_ cchat.ListMember = (*Member)(nil)
-	_ cchat.Iconer     = (*Member)(nil)
-)
-
 // New creates a new list member. it.Member must not be nil.
-func (c Channel) NewMember(opItem gateway.GuildMemberListOpItem) *Member {
+func NewMember(ch *shared.Channel, opItem gateway.GuildMemberListOpItem) cchat.ListMember {
 	return &Member{
-		Channel:  c,
+		channel:  ch,
 		userID:   opItem.Member.User.ID,
 		origName: opItem.Member.User.Username,
 	}
@@ -41,12 +36,12 @@ func (l *Member) ID() cchat.ID {
 }
 
 func (l *Member) Name() text.Rich {
-	g, err := l.state.Store.Guild(l.guildID)
+	g, err := l.channel.State.Store.Guild(l.channel.GuildID)
 	if err != nil {
 		return text.Plain(l.origName)
 	}
 
-	m, err := l.state.Store.Member(l.guildID, l.userID)
+	m, err := l.channel.State.Store.Member(l.channel.GuildID, l.userID)
 	if err != nil {
 		return text.Plain(l.origName)
 	}
@@ -56,8 +51,8 @@ func (l *Member) Name() text.Rich {
 		name = m.Nick
 	}
 
-	mention := segments.MemberSegment(0, len(name), *g, *m)
-	mention.WithState(l.state.State)
+	mention := mention.MemberSegment(0, len(name), *g, *m)
+	mention.WithState(l.channel.State.State)
 
 	var txt = text.Rich{
 		Content:  name,
@@ -65,17 +60,16 @@ func (l *Member) Name() text.Rich {
 	}
 
 	if c := discord.MemberColor(*g, *m); c != discord.DefaultMemberColor {
-		txt.Segments = append(txt.Segments, segments.NewColored(len(name), uint32(c)))
+		txt.Segments = append(txt.Segments, colored.New(len(name), uint32(c)))
 	}
 
 	return txt
 }
 
-// IsIconer returns true.
-func (l *Member) IsIconer() bool { return true }
+func (l *Member) AsIconer() cchat.Iconer { return l }
 
 func (l *Member) Icon(ctx context.Context, c cchat.IconContainer) (func(), error) {
-	m, err := l.state.Member(l.guildID, l.userID)
+	m, err := l.channel.State.Member(l.channel.GuildID, l.userID)
 	if err != nil {
 		return nil, err
 	}
@@ -85,28 +79,28 @@ func (l *Member) Icon(ctx context.Context, c cchat.IconContainer) (func(), error
 	return func() {}, nil
 }
 
-func (l *Member) Status() cchat.UserStatus {
-	p, err := l.state.Store.Presence(l.guildID, l.userID)
+func (l *Member) Status() cchat.Status {
+	p, err := l.channel.State.Store.Presence(l.channel.GuildID, l.userID)
 	if err != nil {
-		return cchat.UnknownStatus
+		return cchat.StatusUnknown
 	}
 
 	switch p.Status {
 	case discord.OnlineStatus:
-		return cchat.OnlineStatus
+		return cchat.StatusOnline
 	case discord.DoNotDisturbStatus:
-		return cchat.BusyStatus
+		return cchat.StatusBusy
 	case discord.IdleStatus:
-		return cchat.AwayStatus
+		return cchat.StatusAway
 	case discord.OfflineStatus, discord.InvisibleStatus:
-		return cchat.OfflineStatus
+		return cchat.StatusOffline
 	default:
-		return cchat.UnknownStatus
+		return cchat.StatusUnknown
 	}
 }
 
 func (l *Member) Secondary() text.Rich {
-	p, err := l.state.Store.Presence(l.guildID, l.userID)
+	p, err := l.channel.State.Store.Presence(l.channel.GuildID, l.userID)
 	if err != nil {
 		return text.Plain("")
 	}
@@ -142,11 +136,9 @@ func formatSmallActivity(ac discord.Activity) text.Rich {
 				status.WriteString(ac.Emoji.Name)
 				status.WriteByte(' ')
 			} else {
-				segmts = append(segmts, segments.EmojiSegment{
-					Start:    status.Len(),
-					Name:     ac.Emoji.Name,
-					EmojiURL: ac.Emoji.EmojiURL() + "?size=64",
-					Large:    ac.State == "",
+				segmts = append(segmts, emoji.Segment{
+					Start: status.Len(),
+					Emoji: emoji.EmojiFromDiscord(*ac.Emoji, ac.State == ""),
 				})
 			}
 		}

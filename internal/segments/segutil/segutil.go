@@ -8,6 +8,13 @@ import (
 
 // helper global functions
 
+func Write(rich *text.Rich, content string, segs ...text.Segment) (start, end int) {
+	start = len(rich.Content)
+	end = len(rich.Content) + len(content)
+	rich.Content += content
+	return
+}
+
 func WriteBuf(w *bytes.Buffer, b []byte) (start, end int) {
 	start = w.Len()
 	w.Write(b)

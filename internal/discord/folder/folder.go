@@ -8,21 +8,18 @@ import (
 	"github.com/diamondburned/cchat"
 	"github.com/diamondburned/cchat-discord/internal/discord/guild"
 	"github.com/diamondburned/cchat-discord/internal/discord/state"
-	"github.com/diamondburned/cchat-discord/internal/segments"
+	"github.com/diamondburned/cchat-discord/internal/segments/colored"
 	"github.com/diamondburned/cchat/text"
+	"github.com/diamondburned/cchat/utils/empty"
 )
 
 type GuildFolder struct {
+	empty.Server
 	gateway.GuildFolder
 	state *state.Instance
 }
 
-var (
-	_ cchat.Server = (*GuildFolder)(nil)
-	_ cchat.Lister = (*GuildFolder)(nil)
-)
-
-func New(s *state.Instance, gf gateway.GuildFolder) *GuildFolder {
+func New(s *state.Instance, gf gateway.GuildFolder) cchat.Server {
 	// Name should never be empty.
 	if gf.Name == "" {
 		var names = make([]string, 0, len(gf.GuildIDs))
@@ -55,7 +52,7 @@ func (gf *GuildFolder) Name() text.Rich {
 	if gf.GuildFolder.Color > 0 {
 		name.Segments = []text.Segment{
 			// The length of this black box is actually 3. Mind == blown.
-			segments.NewColored(len(name.Content), gf.GuildFolder.Color.Uint32()),
+			colored.New(len(name.Content), gf.GuildFolder.Color.Uint32()),
 		}
 	}
 
@@ -63,7 +60,7 @@ func (gf *GuildFolder) Name() text.Rich {
 }
 
 // IsLister returns true.
-func (gf *GuildFolder) IsLister() bool { return true }
+func (gf *GuildFolder) AsLister() cchat.Lister { return gf }
 
 func (gf *GuildFolder) Servers(container cchat.ServersContainer) error {
 	var servers = make([]cchat.Server, 0, len(gf.GuildIDs))

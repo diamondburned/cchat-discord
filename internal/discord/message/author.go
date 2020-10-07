@@ -4,7 +4,9 @@ import (
 	"github.com/diamondburned/arikawa/discord"
 	"github.com/diamondburned/cchat"
 	"github.com/diamondburned/cchat-discord/internal/discord/state"
-	"github.com/diamondburned/cchat-discord/internal/segments"
+	"github.com/diamondburned/cchat-discord/internal/segments/colored"
+	"github.com/diamondburned/cchat-discord/internal/segments/mention"
+	"github.com/diamondburned/cchat-discord/internal/segments/segutil"
 	"github.com/diamondburned/cchat-discord/internal/urlutils"
 	"github.com/diamondburned/cchat/text"
 )
@@ -22,12 +24,12 @@ func NewUser(u discord.User, s *state.Instance) Author {
 	if u.Bot {
 		name.Content += " "
 		name.Segments = append(name.Segments,
-			segments.NewBlurpleSegment(segments.Write(&name, "[BOT]")),
+			colored.NewBlurple(segutil.Write(&name, "[BOT]")),
 		)
 	}
 
 	// Append a clickable user popup.
-	useg := segments.UserSegment(0, len(name.Content), u)
+	useg := mention.UserSegment(0, len(name.Content), u)
 	useg.WithState(s.State)
 	name.Segments = append(name.Segments, useg)
 
@@ -59,7 +61,7 @@ func RenderMemberName(m discord.Member, g discord.Guild, s *state.Instance) text
 	// Update the color.
 	if c := discord.MemberColor(g, m); c > 0 {
 		name.Segments = append(name.Segments,
-			segments.NewColored(len(name.Content), c.Uint32()),
+			colored.New(len(name.Content), c.Uint32()),
 		)
 	}
 
@@ -67,12 +69,12 @@ func RenderMemberName(m discord.Member, g discord.Guild, s *state.Instance) text
 	if m.User.Bot {
 		name.Content += " "
 		name.Segments = append(name.Segments,
-			segments.NewBlurpleSegment(segments.Write(&name, "[BOT]")),
+			colored.NewBlurple(segutil.Write(&name, "[BOT]")),
 		)
 	}
 
 	// Append a clickable user popup.
-	useg := segments.MemberSegment(0, len(name.Content), g, m)
+	useg := mention.MemberSegment(0, len(name.Content), g, m)
 	useg.WithState(s.State)
 	name.Segments = append(name.Segments, useg)
 

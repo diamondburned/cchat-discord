@@ -8,6 +8,7 @@ import (
 	"github.com/diamondburned/cchat-discord/internal/discord/channel"
 	"github.com/diamondburned/cchat-discord/internal/discord/state"
 	"github.com/diamondburned/cchat/text"
+	"github.com/diamondburned/cchat/utils/empty"
 	"github.com/pkg/errors"
 )
 
@@ -57,17 +58,13 @@ func FilterCategory(chs []discord.Channel, catID discord.ChannelID) []discord.Ch
 }
 
 type Category struct {
+	empty.Server
 	id      discord.ChannelID
 	guildID discord.GuildID
 	state   *state.Instance
 }
 
-var (
-	_ cchat.Server = (*Category)(nil)
-	_ cchat.Lister = (*Category)(nil)
-)
-
-func New(s *state.Instance, ch discord.Channel) *Category {
+func New(s *state.Instance, ch discord.Channel) cchat.Server {
 	return &Category{
 		id:      ch.ID,
 		guildID: ch.GuildID,
@@ -91,9 +88,7 @@ func (c *Category) Name() text.Rich {
 	}
 }
 
-func (c *Category) IsLister() bool {
-	return true
-}
+func (c *Category) AsLister() cchat.Lister { return c }
 
 func (c *Category) Servers(container cchat.ServersContainer) error {
 	t, err := c.state.Channels(c.guildID)

@@ -8,6 +8,7 @@ import (
 	"github.com/diamondburned/cchat"
 	"github.com/diamondburned/cchat-discord/internal/discord/state"
 	"github.com/diamondburned/cchat-discord/internal/segments"
+	"github.com/diamondburned/cchat-discord/internal/segments/mention"
 	"github.com/diamondburned/cchat/text"
 )
 
@@ -144,21 +145,21 @@ func NewMessage(m discord.Message, s *state.Instance, author Author) Message {
 	// Request members in mentions if we're in a guild.
 	if m.GuildID.IsValid() {
 		for _, segment := range content.Segments {
-			if mention, ok := segment.(*segments.MentionSegment); ok {
+			if mention, ok := segment.(*mention.Segment); ok {
 				// If this is not a user mention, then skip.
-				if mention.GuildUser == nil {
+				if mention.User == nil {
 					continue
 				}
 
 				// If we already have a member, then skip. We could check this
 				// using the timestamp, as we might have a user set into the
 				// member field
-				if m := mention.GuildUser.Member; m != nil && m.Joined.IsValid() {
+				if mention.User.Member.Joined.IsValid() {
 					continue
 				}
 
 				// Request the member.
-				s.MemberState.RequestMember(m.GuildID, mention.GuildUser.ID)
+				s.MemberState.RequestMember(m.GuildID, mention.User.Member.User.ID)
 			}
 		}
 	}

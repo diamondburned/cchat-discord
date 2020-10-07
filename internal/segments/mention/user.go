@@ -29,7 +29,7 @@ func UserSegment(start, end int, u discord.User) NameSegment {
 		start: start,
 		end:   end,
 		um: User{
-			member: discord.Member{User: u},
+			Member: discord.Member{User: u},
 		},
 	}
 }
@@ -39,8 +39,8 @@ func MemberSegment(start, end int, guild discord.Guild, m discord.Member) NameSe
 		start: start,
 		end:   end,
 		um: User{
-			guild:  guild,
-			member: m,
+			Guild:  guild,
+			Member: m,
 		},
 	}
 }
@@ -56,17 +56,17 @@ func (m NameSegment) Bounds() (start, end int) {
 }
 
 func (m NameSegment) AsMentioner() text.Mentioner {
-	return m.um
+	return &m.um
 }
 
 func (m NameSegment) AsAvatarer() text.Avatarer {
-	return m.um
+	return &m.um
 }
 
 type User struct {
 	state  state.Store
-	guild  discord.Guild
-	member discord.Member
+	Guild  discord.Guild
+	Member discord.Member
 }
 
 var (
@@ -97,18 +97,18 @@ func NewUser(state state.Store, guild discord.GuildID, guser discord.GuildUser) 
 
 	return &User{
 		state:  state,
-		guild:  *g,
-		member: *guser.Member,
+		Guild:  *g,
+		Member: *guser.Member,
 	}
 }
 
 func (um *User) Color() uint32 {
-	g, err := um.state.Guild(um.guild.ID)
+	g, err := um.state.Guild(um.Guild.ID)
 	if err != nil {
 		return colored.Blurple
 	}
 
-	return text.SolidColor(discord.MemberColor(*g, um.member).Uint32())
+	return text.SolidColor(discord.MemberColor(*g, um.Member).Uint32())
 }
 
 func (um *User) AvatarSize() int {
@@ -116,14 +116,14 @@ func (um *User) AvatarSize() int {
 }
 
 func (um *User) AvatarText() string {
-	if um.member.Nick != "" {
-		return um.member.Nick
+	if um.Member.Nick != "" {
+		return um.Member.Nick
 	}
-	return um.member.User.Username
+	return um.Member.User.Username
 }
 
 func (um *User) Avatar() (url string) {
-	return um.member.User.AvatarURL()
+	return um.Member.User.AvatarURL()
 }
 
 func (um *User) MentionInfo() text.Rich {
@@ -131,22 +131,22 @@ func (um *User) MentionInfo() text.Rich {
 	var segment text.Rich
 
 	// Write the username if the user has a nickname.
-	if um.member.Nick != "" {
+	if um.Member.Nick != "" {
 		content.WriteString("Username: ")
-		content.WriteString(um.member.User.Username)
+		content.WriteString(um.Member.User.Username)
 		content.WriteByte('#')
-		content.WriteString(um.member.User.Discriminator)
+		content.WriteString(um.Member.User.Discriminator)
 		content.WriteString("\n\n")
 	}
 
 	// Write extra information if any, but only if we have the guild state.
-	if len(um.member.RoleIDs) > 0 && um.guild.ID.IsValid() {
+	if len(um.Member.RoleIDs) > 0 && um.Guild.ID.IsValid() {
 		// Write a prepended new line, as role writes will always prepend a new
 		// line. This is to prevent a trailing new line.
 		formatSectionf(&segment, &content, "Roles")
 
-		for _, id := range um.member.RoleIDs {
-			rl, ok := findRole(um.guild.Roles, id)
+		for _, id := range um.Member.RoleIDs {
+			rl, ok := findRole(um.Guild.Roles, id)
 			if !ok {
 				continue
 			}
@@ -169,19 +169,19 @@ func (um *User) MentionInfo() text.Rich {
 	// if the state is given.
 	if ningenState, ok := um.state.(*ningen.State); ok {
 		// Does the user have rich presence? If so, write.
-		if p, err := um.state.Presence(um.guild.ID, um.member.User.ID); err == nil {
+		if p, err := um.state.Presence(um.Guild.ID, um.Member.User.ID); err == nil {
 			for _, ac := range p.Activities {
 				formatActivity(&segment, &content, ac)
 				content.WriteString("\n\n")
 			}
-		} else if um.guild.ID.IsValid() {
+		} else if um.Guild.ID.IsValid() {
 			// If we're still in a guild, then we can ask Discord for that
 			// member with their presence attached.
-			ningenState.MemberState.RequestMember(um.guild.ID, um.member.User.ID)
+			ningenState.MemberState.RequestMember(um.Guild.ID, um.Member.User.ID)
 		}
 
 		// Write the user's note if any.
-		if note := ningenState.NoteState.Note(um.member.User.ID); note != "" {
+		if note := ningenState.NoteState.Note(um.Member.User.ID); note != "" {
 			formatSectionf(&segment, &content, "Note")
 			content.WriteRune('\n')
 

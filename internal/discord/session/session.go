@@ -11,27 +11,20 @@ import (
 	"github.com/diamondburned/cchat-discord/internal/discord/state"
 	"github.com/diamondburned/cchat-discord/internal/urlutils"
 	"github.com/diamondburned/cchat/text"
+	"github.com/diamondburned/cchat/utils/empty"
 	"github.com/diamondburned/ningen"
 	"github.com/pkg/errors"
 )
 
+var ErrMFA = session.ErrMFA
+
 type Session struct {
+	*empty.Session
 	*state.Instance
 }
 
-var (
-	_ cchat.Iconer       = (*Session)(nil)
-	_ cchat.Session      = (*Session)(nil)
-	_ cchat.SessionSaver = (*Session)(nil)
-)
-
-func NewFromToken(token string) (*Session, error) {
-	i, err := state.NewFromToken(token)
-	if err != nil {
-		return nil, err
-	}
-
-	return &Session{i}, nil
+func NewFromInstance(i *state.Instance) (cchat.Session, error) {
+	return &Session{Instance: i}, nil
 }
 
 func (s *Session) ID() cchat.ID {
@@ -48,8 +41,7 @@ func (s *Session) Name() text.Rich {
 	return text.Rich{Content: u.Username + "#" + u.Discriminator}
 }
 
-// IsIconer returns true.
-func (s *Session) IsIconer() bool { return true }
+func (s *Session) AsIconer() cchat.Iconer { return s }
 
 func (s *Session) Icon(ctx context.Context, iconer cchat.IconContainer) (func(), error) {
 	u, err := s.Me()
@@ -72,14 +64,7 @@ func (s *Session) Disconnect() error {
 	return s.Close()
 }
 
-// IsSessionSaver returns true.
-func (s *Session) IsSessionSaver() bool { return true }
-
-func (s *Session) SaveSession() map[string]string {
-	return map[string]string{
-		"token": s.Token,
-	}
-}
+func (s *Session) AsSessionSaver() cchat.SessionSaver { return s.Instance }
 
 func (s *Session) Servers(container cchat.ServersContainer) error {
 	// Reset the entire container when the session is closed.

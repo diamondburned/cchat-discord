@@ -1,11 +1,11 @@
-package channel
+package memberlist
 
 import (
 	"context"
 
 	"github.com/diamondburned/arikawa/gateway"
 	"github.com/diamondburned/cchat"
-	"github.com/diamondburned/cchat-discord/internal/discord/channel/memberlist"
+	"github.com/diamondburned/cchat-discord/internal/discord/channel/shared"
 	"github.com/diamondburned/ningen/states/member"
 )
 
@@ -30,24 +30,21 @@ func seekPrevGroup(l *member.List, ix int) (item, group gateway.GuildMemberListO
 	return
 }
 
-var _ cchat.MemberLister = (*Channel)(nil)
-
-// IsMemberLister returns true if the channel is a guild channel.
-func (ch *Channel) IsMemberLister() bool {
-	return ch.guildID.IsValid()
+type MemberLister struct {
+	*shared.Channel
 }
 
-func (ch *Channel) memberListCh() memberlist.Channel {
-	return memberlist.NewChannel(ch.state, ch.id, ch.guildID)
+func New(ch *shared.Channel) cchat.MemberLister {
+	return MemberLister{ch}
 }
 
-func (ch *Channel) ListMembers(ctx context.Context, c cchat.MemberListContainer) (func(), error) {
-	if !ch.guildID.IsValid() {
+func (ml MemberLister) ListMembers(ctx context.Context, c cchat.MemberListContainer) (func(), error) {
+	if !ml.GuildID.IsValid() {
 		return func() {}, nil
 	}
 
-	cancel := ch.state.AddHandler(func(u *gateway.GuildMemberListUpdate) {
-		l, err := ch.state.MemberState.GetMemberList(ch.guildID, ch.id)
+	cancel := ml.State.AddHandler(func(u *gateway.GuildMemberListUpdate) {
+		l, err := ml.State.MemberState.GetMemberList(ml.GuildID, ml.ID)
 		if err != nil {
 			return // wat
 		}
@@ -56,44 +53,41 @@ func (ch *Channel) ListMembers(ctx context.Context, c cchat.MemberListContainer)
 			return
 		}
 
-		var listCh = ch.memberListCh()
-
 		for _, ev := range u.Ops {
 			switch ev.Op {
 			case "SYNC":
-				ch.checkSync(c)
+				ml.checkSync(c)
 
 			case "INSERT", "UPDATE":
 				item, group := seekPrevGroup(l, ev.Index)
 				if item.Member != nil && group.Group != nil {
-					c.SetMember(group.Group.ID, listCh.NewMember(item))
-					listCh.FlushMemberGroups(l, c)
+					c.SetMember(group.Group.ID, NewMember(ml.Channel, item))
+					ml.FlushMemberGroups(l, c)
 				}
 
 			case "DELETE":
 				_, group := seekPrevGroup(l, ev.Index-1)
 				if group.Group != nil && ev.Item.Member != nil {
 					c.RemoveMember(group.Group.ID, ev.Item.Member.User.ID.String())
-					listCh.FlushMemberGroups(l, c)
+					ml.FlushMemberGroups(l, c)
 				}
 			}
 		}
 	})
 
-	ch.checkSync(c)
+	ml.checkSync(c)
 
 	return cancel, nil
 }
 
-func (ch *Channel) checkSync(c cchat.MemberListContainer) {
-	l, err := ch.state.MemberState.GetMemberList(ch.guildID, ch.id)
+func (ml MemberLister) checkSync(c cchat.MemberListContainer) {
+	l, err := ml.State.MemberState.GetMemberList(ml.GuildID, ml.ID)
 	if err != nil {
-		ch.state.MemberState.RequestMemberList(ch.guildID, ch.id, 0)
+		ml.State.MemberState.RequestMemberList(ml.GuildID, ml.ID, 0)
 		return
 	}
 
-	listCh := ch.memberListCh()
-	listCh.FlushMemberGroups(l, c)
+	ml.FlushMemberGroups(l, c)
 
 	l.ViewItems(func(items []gateway.GuildMemberListOpItem) {
 		var group gateway.GuildMemberListGroup
@@ -104,8 +98,19 @@ func (ch *Channel) checkSync(c cchat.MemberListContainer) {
 				group = *item.Group
 
 			case item.Member != nil:
-				c.SetMember(group.ID, listCh.NewMember(item))
+				c.SetMember(group.ID, NewMember(ml.Channel, item))
 			}
 		}
+	})
+}
+
+func (ml MemberLister) FlushMemberGroups(l *member.List, c cchat.MemberListContainer) {
+	l.ViewGroups(func(groups []gateway.GuildMemberListGroup) {
+		var sections = make([]cchat.MemberSection, len(groups))
+		for i, group := range groups {
+			sections[i] = NewSection(ml.Channel, l.ID(), group)
+		}
+
+		c.SetSections(sections)
 	})
 }

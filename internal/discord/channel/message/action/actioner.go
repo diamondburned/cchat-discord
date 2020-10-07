@@ -1,15 +1,21 @@
-package channel
+package action
 
 import (
 	"github.com/diamondburned/arikawa/discord"
 	"github.com/diamondburned/cchat"
+	"github.com/diamondburned/cchat-discord/internal/discord/channel/shared"
 	"github.com/pkg/errors"
 )
 
-var _ cchat.Actioner = (*Channel)(nil)
+type Actioner struct {
+	*shared.Channel
+}
 
-// IsActioner returns true.
-func (ch *Channel) IsActioner() bool { return true }
+var _ cchat.Actioner = (*Actioner)(nil)
+
+func New(ch *shared.Channel) Actioner {
+	return Actioner{ch}
+}
 
 const (
 	ActionDelete = "Delete"
@@ -17,7 +23,7 @@ const (
 
 var ErrUnknownAction = errors.New("unknown message action")
 
-func (ch *Channel) DoMessageAction(action, id string) error {
+func (ac Actioner) DoAction(action, id string) error {
 	s, err := discord.ParseSnowflake(id)
 	if err != nil {
 		return errors.Wrap(err, "Failed to parse ID")
@@ -25,25 +31,25 @@ func (ch *Channel) DoMessageAction(action, id string) error {
 
 	switch action {
 	case ActionDelete:
-		return ch.state.DeleteMessage(ch.id, discord.MessageID(s))
+		return ac.State.DeleteMessage(ac.ID, discord.MessageID(s))
 	default:
 		return ErrUnknownAction
 	}
 }
 
-func (ch *Channel) MessageActions(id string) []string {
+func (ac Actioner) Actions(id string) []string {
 	s, err := discord.ParseSnowflake(id)
 	if err != nil {
 		return nil
 	}
 
-	m, err := ch.state.Store.Message(ch.id, discord.MessageID(s))
+	m, err := ac.State.Store.Message(ac.ID, discord.MessageID(s))
 	if err != nil {
 		return nil
 	}
 
 	// Get the current user.
-	u, err := ch.state.Store.Me()
+	u, err := ac.State.Store.Me()
 	if err != nil {
 		return nil
 	}
@@ -54,7 +60,7 @@ func (ch *Channel) MessageActions(id string) []string {
 	// We also can if we have the Manage Messages permission, which would allow
 	// us to delete others' messages.
 	if !canDelete {
-		canDelete = ch.canManageMessages(u.ID)
+		canDelete = ac.canManageMessages(u.ID)
 	}
 
 	if canDelete {
@@ -66,26 +72,26 @@ func (ch *Channel) MessageActions(id string) []string {
 
 // canManageMessages returns whether or not the user is allowed to manage
 // messages.
-func (ch *Channel) canManageMessages(userID discord.UserID) bool {
+func (ac Actioner) canManageMessages(userID discord.UserID) bool {
 	// If we're not in a guild, then clearly we cannot.
-	if !ch.guildID.IsValid() {
+	if !ac.GuildID.IsValid() {
 		return false
 	}
 
 	// We need the guild, member and channel to calculate the permission
 	// overrides.
 
-	g, err := ch.guild()
+	g, err := ac.Guild()
 	if err != nil {
 		return false
 	}
 
-	c, err := ch.self()
+	c, err := ac.Self()
 	if err != nil {
 		return false
 	}
 
-	m, err := ch.state.Store.Member(ch.guildID, userID)
+	m, err := ac.State.Store.Member(ac.GuildID, userID)
 	if err != nil {
 		return false
 	}

@@ -12,28 +12,24 @@ import (
 	"github.com/diamondburned/cchat-discord/internal/discord/state"
 	"github.com/diamondburned/cchat-discord/internal/urlutils"
 	"github.com/diamondburned/cchat/text"
+	"github.com/diamondburned/cchat/utils/empty"
 	"github.com/pkg/errors"
 )
 
 type Guild struct {
+	empty.Server
 	id    discord.GuildID
 	state *state.Instance
 }
 
-var (
-	_ cchat.Iconer = (*Guild)(nil)
-	_ cchat.Server = (*Guild)(nil)
-	_ cchat.Lister = (*Guild)(nil)
-)
-
-func New(s *state.Instance, g *discord.Guild) *Guild {
+func New(s *state.Instance, g *discord.Guild) cchat.Server {
 	return &Guild{
 		id:    g.ID,
 		state: s,
 	}
 }
 
-func NewFromID(s *state.Instance, gID discord.GuildID) (*Guild, error) {
+func NewFromID(s *state.Instance, gID discord.GuildID) (cchat.Server, error) {
 	g, err := s.Guild(gID)
 	if err != nil {
 		return nil, err
@@ -64,11 +60,7 @@ func (g *Guild) Name() text.Rich {
 	return text.Rich{Content: s.Name}
 }
 
-// IsIconer returns true if the guild has an icon.
-func (g *Guild) IsIconer() bool {
-	s, err := g.selfState()
-	return err == nil && s.Icon != ""
-}
+func (g *Guild) AsIconer() cchat.Iconer { return g }
 
 func (g *Guild) Icon(ctx context.Context, iconer cchat.IconContainer) (func(), error) {
 	s, err := g.self(ctx)
@@ -89,8 +81,7 @@ func (g *Guild) Icon(ctx context.Context, iconer cchat.IconContainer) (func(), e
 	}), nil
 }
 
-// IsLister returns true.
-func (g *Guild) IsLister() bool { return true }
+func (g *Guild) AsLister() cchat.Lister { return g }
 
 func (g *Guild) Servers(container cchat.ServersContainer) error {
 	c, err := g.state.Channels(g.id)
