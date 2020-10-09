@@ -18,11 +18,7 @@ func New(ch *shared.Channel) cchat.Backlogger {
 	return Backlogger{ch}
 }
 
-func (bl Backlogger) MessagesBefore(
-	ctx context.Context,
-	b cchat.ID,
-	c cchat.MessagesContainer) error {
-
+func (bl Backlogger) Backlog(ctx context.Context, b cchat.ID, c cchat.MessagesContainer) error {
 	p, err := discord.ParseSnowflake(b)
 	if err != nil {
 		return errors.Wrap(err, "Failed to parse snowflake")

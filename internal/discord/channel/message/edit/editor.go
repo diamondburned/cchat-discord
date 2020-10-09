@@ -15,9 +15,9 @@ func New(ch *shared.Channel) cchat.Editor {
 	return Editor{ch}
 }
 
-// MessageEditable returns true if the given message ID belongs to the current
+// IsEditable returns true if the given message ID belongs to the current
 // user.
-func (ed Editor) MessageEditable(id string) bool {
+func (ed Editor) IsEditable(id string) bool {
 	s, err := discord.ParseSnowflake(id)
 	if err != nil {
 		return false
@@ -31,8 +31,8 @@ func (ed Editor) MessageEditable(id string) bool {
 	return m.Author.ID == ed.State.UserID
 }
 
-// RawMessageContent returns the raw message content from Discord.
-func (ed Editor) RawMessageContent(id string) (string, error) {
+// RawContent returns the raw message content from Discord.
+func (ed Editor) RawContent(id string) (string, error) {
 	s, err := discord.ParseSnowflake(id)
 	if err != nil {
 		return "", errors.Wrap(err, "Failed to parse ID")
@@ -46,8 +46,8 @@ func (ed Editor) RawMessageContent(id string) (string, error) {
 	return m.Content, nil
 }
 
-// EditMessage edits the message to the given content string.
-func (ed Editor) EditMessage(id, content string) error {
+// Edit edits the message to the given content string.
+func (ed Editor) Edit(id, content string) error {
 	s, err := discord.ParseSnowflake(id)
 	if err != nil {
 		return errors.Wrap(err, "Failed to parse ID")

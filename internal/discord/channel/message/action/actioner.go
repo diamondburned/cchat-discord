@@ -23,7 +23,7 @@ const (
 
 var ErrUnknownAction = errors.New("unknown message action")
 
-func (ac Actioner) DoAction(action, id string) error {
+func (ac Actioner) Do(action, id string) error {
 	s, err := discord.ParseSnowflake(id)
 	if err != nil {
 		return errors.Wrap(err, "Failed to parse ID")
