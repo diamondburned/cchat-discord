@@ -55,12 +55,15 @@ func (m NameSegment) Bounds() (start, end int) {
 	return m.start, m.end
 }
 
-func (m NameSegment) AsMentioner() text.Mentioner {
-	return &m.um
-}
+func (m NameSegment) AsMentioner() text.Mentioner { return &m.um }
+func (m NameSegment) AsAvatarer() text.Avatarer   { return &m.um }
 
-func (m NameSegment) AsAvatarer() text.Avatarer {
-	return &m.um
+// AsColorer only returns User if the user actually has a colored role.
+func (m NameSegment) AsColorer() text.Colorer {
+	if m.um.HasColor() {
+		return &m.um
+	}
+	return nil
 }
 
 type User struct {
@@ -102,31 +105,51 @@ func NewUser(state state.Store, guild discord.GuildID, guser discord.GuildUser) 
 	}
 }
 
-func (um *User) Color() uint32 {
+// HasColor returns true if the current user has a color.
+func (um User) HasColor() bool {
+	// We don't have any member color if we have neither the member nor guild.
+	if !um.Guild.ID.IsValid() || !um.Member.User.ID.IsValid() {
+		return false
+	}
+
+	g, err := um.state.Guild(um.Guild.ID)
+	if err != nil {
+		return false
+	}
+
+	return discord.MemberColor(*g, um.Member) > 0
+}
+
+func (um User) Color() uint32 {
 	g, err := um.state.Guild(um.Guild.ID)
 	if err != nil {
 		return colored.Blurple
 	}
 
-	return text.SolidColor(discord.MemberColor(*g, um.Member).Uint32())
+	var color = discord.MemberColor(*g, um.Member)
+	if color == 0 {
+		return colored.Blurple
+	}
+
+	return text.SolidColor(color.Uint32())
 }
 
-func (um *User) AvatarSize() int {
+func (um User) AvatarSize() int {
 	return 96
 }
 
-func (um *User) AvatarText() string {
+func (um User) AvatarText() string {
 	if um.Member.Nick != "" {
 		return um.Member.Nick
 	}
 	return um.Member.User.Username
 }
 
-func (um *User) Avatar() (url string) {
+func (um User) Avatar() (url string) {
 	return um.Member.User.AvatarURL()
 }
 
-func (um *User) MentionInfo() text.Rich {
+func (um User) MentionInfo() text.Rich {
 	var content bytes.Buffer
 	var segment text.Rich
 

@@ -19,7 +19,7 @@ import (
 var ErrMFA = session.ErrMFA
 
 type Session struct {
-	*empty.Session
+	empty.Session
 	*state.Instance
 }
 
@@ -90,7 +90,7 @@ func (s *Session) servers(container cchat.ServersContainer) error {
 		for _, guildFolder := range s.Ready.Settings.GuildFolders {
 			// TODO: correct.
 			switch {
-			case guildFolder.ID > 0:
+			case guildFolder.ID != 0:
 				fallthrough
 			case len(guildFolder.GuildIDs) > 1:
 				toplevels = append(toplevels, folder.New(s.Instance, guildFolder))

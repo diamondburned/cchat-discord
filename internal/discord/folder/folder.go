@@ -25,7 +25,8 @@ func New(s *state.Instance, gf gateway.GuildFolder) cchat.Server {
 		var names = make([]string, 0, len(gf.GuildIDs))
 
 		for _, id := range gf.GuildIDs {
-			if g, _ := s.Store.Guild(id); g != nil {
+			g, err := s.Store.Guild(id)
+			if err == nil {
 				names = append(names, g.Name)
 			}
 		}

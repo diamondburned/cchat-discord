@@ -12,8 +12,10 @@ import (
 )
 
 type Channel struct {
-	*empty.Server
+	empty.Server
+
 	*shared.Channel
+	commander cchat.Commander
 }
 
 var _ cchat.Server = (*Channel)(nil)
@@ -25,30 +27,16 @@ func New(s *state.Instance, ch discord.Channel) (cchat.Server, error) {
 		return nil, errors.Wrap(err, "Failed to get permission")
 	}
 
-	return Channel{
-		Channel: &shared.Channel{
-			ID:      ch.ID,
-			GuildID: ch.GuildID,
-			State:   s,
-		},
-	}, nil
-}
-
-// self does not do IO.
-func (ch Channel) self() (*discord.Channel, error) {
-	return ch.State.Store.Channel(ch.Channel.ID)
-}
-
-// messages does not do IO.
-func (ch Channel) messages() ([]discord.Message, error) {
-	return ch.State.Store.Messages(ch.Channel.ID)
-}
-
-func (ch Channel) guild() (*discord.Guild, error) {
-	if ch.GuildID.IsValid() {
-		return ch.State.Store.Guild(ch.GuildID)
+	sharedCh := &shared.Channel{
+		ID:      ch.ID,
+		GuildID: ch.GuildID,
+		State:   s,
 	}
-	return nil, errors.New("channel not in a guild")
+
+	return Channel{
+		Channel:   sharedCh,
+		commander: NewCommander(sharedCh),
+	}, nil
 }
 
 func (ch Channel) ID() cchat.ID {
@@ -56,7 +44,7 @@ func (ch Channel) ID() cchat.ID {
 }
 
 func (ch Channel) Name() text.Rich {
-	c, err := ch.self()
+	c, err := ch.Self()
 	if err != nil {
 		return text.Rich{Content: ch.Channel.ID.String()}
 	}
@@ -66,6 +54,10 @@ func (ch Channel) Name() text.Rich {
 	} else {
 		return text.Rich{Content: "#" + c.Name}
 	}
+}
+
+func (ch Channel) AsCommander() cchat.Commander {
+	return ch.commander
 }
 
 func (ch Channel) AsMessenger() cchat.Messenger {

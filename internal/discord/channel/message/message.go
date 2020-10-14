@@ -22,7 +22,7 @@ import (
 )
 
 type Messenger struct {
-	*empty.Messenger
+	empty.Messenger
 	*shared.Channel
 }
 
