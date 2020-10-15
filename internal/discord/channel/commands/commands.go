@@ -39,7 +39,7 @@ func (cmds Commands) Run(ch *shared.Channel, words []string) ([]byte, error) {
 		return nil, fmt.Errorf("unknown command %q, refer to help", words[0])
 	}
 
-	return cmd.RunFunc(ch, words)
+	return cmd.RunFunc(ch, words[1:])
 }
 
 // FindExact finds the exact command. It returns a pointer to the command
@@ -93,6 +93,7 @@ var World = Commands{
 				return nil, err
 			}
 
+			embed.Description = fs.Arg(0)
 			embed.Color = discord.Color(color)
 
 			m, err := ch.State.SendEmbed(ch.ID, embed)
@@ -157,6 +158,32 @@ var World = Commands{
 			}
 
 			return renderJSON(p)
+		},
+	},
+	{
+		Name: "member",
+		Args: Arguments{"mention:user"},
+		Desc: "Print JSON of a member/user's member state",
+		RunFunc: func(ch *shared.Channel, argv []string) ([]byte, error) {
+			if err := assertArgc(argv, 1); err != nil {
+				return nil, err
+			}
+
+			if !ch.GuildID.IsValid() {
+				return nil, errors.New("channel not in guild")
+			}
+
+			var user arguments.UserMention
+			if err := user.Parse(argv[0]); err != nil {
+				return nil, err
+			}
+
+			m, err := ch.State.Member(ch.GuildID, user.ID())
+			if err != nil {
+				return nil, err
+			}
+
+			return renderJSON(m)
 		},
 	},
 }
