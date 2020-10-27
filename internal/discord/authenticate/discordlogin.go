@@ -8,16 +8,28 @@ import (
 	"github.com/diamondburned/cchat"
 	"github.com/diamondburned/cchat-discord/internal/discord/session"
 	"github.com/diamondburned/cchat-discord/internal/discord/state"
+	"github.com/diamondburned/cchat/text"
 	"github.com/pkg/errors"
 	"github.com/skratchdot/open-golang/open"
 )
 
 var ErrDLNotFound = errors.New("DiscordLogin not found. Please install it from the GitHub page.")
 
+// DiscordLoginAuth is a first stage authenticator that allows the user to
+// authenticate using DiscordLogin. The Authenticate() function will exec up the
+// application if possible. If not, it'll try and exec up a browser.
 type DiscordLoginAuth struct{}
 
 func NewDiscordLogin() cchat.Authenticator {
 	return DiscordLoginAuth{}
+}
+
+func (DiscordLoginAuth) Name() text.Rich {
+	return text.Plain("DiscordLogin")
+}
+
+func (DiscordLoginAuth) Description() text.Rich {
+	return text.Plain("Log in using DiscordLogin, a WebKit application.")
 }
 
 // AuthenticateForm returns an empty slice.
@@ -25,12 +37,12 @@ func (DiscordLoginAuth) AuthenticateForm() []cchat.AuthenticateEntry {
 	return []cchat.AuthenticateEntry{}
 }
 
-// Authenticate pops up discordlogin.
-func (DiscordLoginAuth) Authenticate([]string) (cchat.Session, error) {
+// Authenticate pops up DiscordLogin.
+func (DiscordLoginAuth) Authenticate([]string) (cchat.Session, cchat.AuthenticateError) {
 	path, err := lookPathExtras("discordlogin")
 	if err != nil {
 		openDiscordLoginPage()
-		return nil, ErrDLNotFound
+		return nil, cchat.WrapAuthenticateError(ErrDLNotFound)
 	}
 
 	cmd := &exec.Cmd{Path: path}
@@ -40,19 +52,26 @@ func (DiscordLoginAuth) Authenticate([]string) (cchat.Session, error) {
 
 	b, err := cmd.Output()
 	if err != nil {
-		return nil, errors.Wrap(err, "DiscordLogin failed")
+		return nil, cchat.WrapAuthenticateError(errors.Wrap(err, "DiscordLogin failed"))
 	}
 
 	if len(b) == 0 {
-		return nil, errors.New("DiscordLogin returned nothing, check Console.")
+		return nil, cchat.WrapAuthenticateError(
+			errors.New("DiscordLogin returned nothing, check Console."),
+		)
 	}
 
 	i, err := state.NewFromToken(string(b))
 	if err != nil {
-		return nil, err
+		return nil, cchat.WrapAuthenticateError(errors.Wrap(err, "failed to use token"))
 	}
 
-	return session.NewFromInstance(i)
+	s, err := session.NewFromInstance(i)
+	if err != nil {
+		return nil, cchat.WrapAuthenticateError(errors.Wrap(err, "failed to make a session"))
+	}
+
+	return s, nil
 }
 
 func openDiscordLoginPage() {

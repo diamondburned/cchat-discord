@@ -24,10 +24,7 @@ func (Service) Name() text.Rich {
 }
 
 func (Service) Authenticate() []cchat.Authenticator {
-	return []cchat.Authenticator{
-		authenticate.New(),
-		authenticate.NewDiscordLogin(),
-	}
+	return authenticate.FirstStageAuthenticators()
 }
 
 func (Service) AsIconer() cchat.Iconer {
