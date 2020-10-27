@@ -23,8 +23,11 @@ func (Service) Name() text.Rich {
 	return text.Rich{Content: "Discord"}
 }
 
-func (Service) Authenticate() cchat.Authenticator {
-	return authenticate.New()
+func (Service) Authenticate() []cchat.Authenticator {
+	return []cchat.Authenticator{
+		authenticate.New(),
+		authenticate.NewDiscordLogin(),
+	}
 }
 
 func (Service) AsIconer() cchat.Iconer {
