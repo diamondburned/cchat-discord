@@ -15,7 +15,7 @@ type LoginAuthenticator struct {
 	client *api.Client
 }
 
-func NewLoginAuthenticator() cchat.Authenticator {
+func NewLoginAuthenticator() *LoginAuthenticator {
 	return &LoginAuthenticator{
 		client: api.NewClient(""),
 	}

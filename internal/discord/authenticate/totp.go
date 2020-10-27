@@ -32,7 +32,7 @@ type TOTPAuthenticator struct {
 	ticket string
 }
 
-func NewTOTPAuthenticator(ticket string) cchat.Authenticator {
+func NewTOTPAuthenticator(ticket string) *TOTPAuthenticator {
 	return &TOTPAuthenticator{
 		client: api.NewClient(""),
 		ticket: ticket,

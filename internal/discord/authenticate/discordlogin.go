@@ -20,7 +20,7 @@ var ErrDLNotFound = errors.New("DiscordLogin not found. Please install it from t
 // application if possible. If not, it'll try and exec up a browser.
 type DiscordLoginAuth struct{}
 
-func NewDiscordLogin() cchat.Authenticator {
+func NewDiscordLogin() DiscordLoginAuth {
 	return DiscordLoginAuth{}
 }
 

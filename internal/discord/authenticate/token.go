@@ -12,7 +12,7 @@ import (
 // authenticate directly using a token.
 type TokenAuthenticator struct{}
 
-func NewTokenAuthenticator() cchat.Authenticator {
+func NewTokenAuthenticator() TokenAuthenticator {
 	return TokenAuthenticator{}
 }
 
