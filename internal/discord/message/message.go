@@ -80,9 +80,10 @@ func NewMessageUpdateContent(msg discord.Message, s *state.Instance) Message {
 		}
 	}
 
+	var content = segments.ParseMessage(&msg, s.Store)
 	return Message{
 		messageHeader: newHeader(msg),
-		content:       segments.ParseMessage(&msg, s.Store),
+		content:       content,
 	}
 }
 

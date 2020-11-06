@@ -3,6 +3,7 @@ package renderer
 import (
 	"bytes"
 	"fmt"
+	"log"
 
 	"github.com/diamondburned/arikawa/discord"
 	"github.com/diamondburned/arikawa/state"
@@ -18,6 +19,7 @@ var renderers = map[ast.NodeKind]Renderer{}
 
 // Register registers a renderer to a node kind.
 func Register(kind ast.NodeKind, r Renderer) {
+	log.Printf("Registering kind %v", kind)
 	renderers[kind] = r
 }
 
@@ -185,6 +187,8 @@ func (r *Text) RenderNode(n ast.Node, enter bool) (ast.WalkStatus, error) {
 		return f(r, n, enter), nil
 	}
 
+	log.Println("unknown kind:", n.Kind())
+
 	switch n := n.(type) {
 	case *ast.Document:
 	case *ast.Paragraph:
@@ -192,20 +196,6 @@ func (r *Text) RenderNode(n ast.Node, enter bool) (ast.WalkStatus, error) {
 			// TODO: investigate
 			// r.Buffer.WriteByte('\n')
 		}
-	// case *ast.Blockquote:
-	// 	return r.blockquote(n, enter), nil
-	// case *ast.FencedCodeBlock:
-	// 	return r.codeblock(n, enter), nil
-	// case *ast.Link:
-	// 	return r.link(n, enter), nil
-	// case *ast.AutoLink:
-	// 	return r.autoLink(n, enter), nil
-	// case *md.Inline:
-	// 	return r.inline(n, enter), nil
-	// case *md.Emoji:
-	// 	return r.emoji(n, enter), nil
-	// case *md.Mention:
-	// 	return r.mention(n, enter), nil
 	case *ast.String:
 		if enter {
 			r.Buffer.Write(n.Value)

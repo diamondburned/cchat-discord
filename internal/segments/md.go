@@ -7,6 +7,14 @@ import (
 	"github.com/diamondburned/cchat-discord/internal/segments/renderer"
 	"github.com/diamondburned/cchat/text"
 	"github.com/diamondburned/ningen/md"
+
+	_ "github.com/diamondburned/cchat-discord/internal/segments/blockquote"
+	_ "github.com/diamondburned/cchat-discord/internal/segments/codeblock"
+	_ "github.com/diamondburned/cchat-discord/internal/segments/colored"
+	_ "github.com/diamondburned/cchat-discord/internal/segments/emoji"
+	_ "github.com/diamondburned/cchat-discord/internal/segments/inline"
+	_ "github.com/diamondburned/cchat-discord/internal/segments/link"
+	_ "github.com/diamondburned/cchat-discord/internal/segments/mention"
 )
 
 func ParseMessage(m *discord.Message, s state.Store) text.Rich {

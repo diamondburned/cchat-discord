@@ -8,7 +8,7 @@ import (
 )
 
 func init() {
-	renderer.Register(ast.KindCodeBlock, codeblock)
+	renderer.Register(ast.KindFencedCodeBlock, codeblock)
 }
 
 func codeblock(r *renderer.Text, node ast.Node, enter bool) ast.WalkStatus {
