@@ -187,8 +187,6 @@ func (r *Text) RenderNode(n ast.Node, enter bool) (ast.WalkStatus, error) {
 		return f(r, n, enter), nil
 	}
 
-	log.Println("unknown kind:", n.Kind())
-
 	switch n := n.(type) {
 	case *ast.Document:
 	case *ast.Paragraph:

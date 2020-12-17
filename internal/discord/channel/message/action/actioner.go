@@ -8,12 +8,12 @@ import (
 )
 
 type Actioner struct {
-	*shared.Channel
+	shared.Channel
 }
 
 var _ cchat.Actioner = (*Actioner)(nil)
 
-func New(ch *shared.Channel) Actioner {
+func New(ch shared.Channel) Actioner {
 	return Actioner{ch}
 }
 

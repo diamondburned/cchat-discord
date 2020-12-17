@@ -11,11 +11,11 @@ import (
 )
 
 type Commander struct {
-	*shared.Channel
+	shared.Channel
 	msgCompl complete.Completer
 }
 
-func NewCommander(ch *shared.Channel) cchat.Commander {
+func NewCommander(ch shared.Channel) cchat.Commander {
 	return Commander{
 		Channel: ch,
 		msgCompl: complete.Completer{

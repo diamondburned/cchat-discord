@@ -10,7 +10,7 @@ func NewCancels() func(...func()) []func() {
 }
 
 // JoinCancels joins multiple cancel callbacks into one.
-func JoinCancels(cancellers []func()) func() {
+func JoinCancels(cancellers ...func()) func() {
 	return func() {
 		for _, c := range cancellers {
 			c()

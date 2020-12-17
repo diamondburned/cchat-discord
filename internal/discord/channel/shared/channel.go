@@ -1,6 +1,8 @@
 package shared
 
 import (
+	"errors"
+
 	"github.com/diamondburned/arikawa/discord"
 	"github.com/diamondburned/cchat-discord/internal/discord/state"
 )
@@ -33,6 +35,9 @@ func (ch Channel) Messages() ([]discord.Message, error) {
 }
 
 func (ch Channel) Guild() (*discord.Guild, error) {
+	if !ch.GuildID.IsValid() {
+		return nil, errors.New("channel not in guild")
+	}
 	return ch.State.Store.Guild(ch.GuildID)
 }
 

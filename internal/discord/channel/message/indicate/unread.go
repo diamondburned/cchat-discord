@@ -8,10 +8,10 @@ import (
 )
 
 type UnreadIndicator struct {
-	*shared.Channel
+	shared.Channel
 }
 
-func NewUnread(ch *shared.Channel) cchat.UnreadIndicator {
+func NewUnread(ch shared.Channel) cchat.UnreadIndicator {
 	return UnreadIndicator{ch}
 }
 

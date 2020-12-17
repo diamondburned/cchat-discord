@@ -8,12 +8,12 @@ import (
 )
 
 type Completer struct {
-	*shared.Channel
+	shared.Channel
 }
 
 const MaxCompletion = 15
 
-func New(ch *shared.Channel) cchat.Completer {
+func New(ch shared.Channel) cchat.Completer {
 	return Completer{ch}
 }
 

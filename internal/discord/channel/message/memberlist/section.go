@@ -23,7 +23,7 @@ type Section struct {
 }
 
 func NewSection(
-	ch *shared.Channel,
+	ch shared.Channel,
 	listID string,
 	group gateway.GuildMemberListGroup) cchat.MemberSection {
 
@@ -78,7 +78,7 @@ func (s Section) AsMemberDynamicSection() cchat.MemberDynamicSection {
 func (s Section) IsMemberDynamicSection() bool { return true }
 
 type DynamicSection struct {
-	*shared.Channel
+	shared.Channel
 }
 
 var _ cchat.MemberDynamicSection = (*DynamicSection)(nil)

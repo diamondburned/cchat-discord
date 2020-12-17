@@ -6,28 +6,30 @@ import (
 	"github.com/diamondburned/cchat"
 	"github.com/diamondburned/cchat-discord/internal/discord/channel/message/send/complete"
 	"github.com/diamondburned/cchat-discord/internal/discord/channel/shared"
+	"github.com/diamondburned/cchat-discord/internal/discord/state"
 )
 
 type Sender struct {
-	*shared.Channel
+	shared.Channel
 }
 
 var _ cchat.Sender = (*Sender)(nil)
 
-func New(ch *shared.Channel) Sender {
+func New(ch shared.Channel) Sender {
 	return Sender{ch}
 }
 
 func (s Sender) Send(msg cchat.SendableMessage) error {
+	return Send(s.State, s.ID, msg)
+}
+
+func Send(s *state.Instance, chID discord.ChannelID, msg cchat.SendableMessage) error {
 	var send = api.SendMessageData{Content: msg.Content()}
-	if noncer := msg.AsNoncer(); noncer != nil {
-		send.Nonce = noncer.Nonce()
-	}
 	if attacher := msg.AsAttachments(); attacher != nil {
 		send.Files = addAttachments(attacher.Attachments())
 	}
 
-	_, err := s.State.SendMessageComplex(s.ID, send)
+	_, err := s.SendMessageComplex(chID, send)
 	return err
 }
 

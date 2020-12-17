@@ -11,10 +11,10 @@ import (
 )
 
 type Backlogger struct {
-	*shared.Channel
+	shared.Channel
 }
 
-func New(ch *shared.Channel) cchat.Backlogger {
+func New(ch shared.Channel) cchat.Backlogger {
 	return Backlogger{ch}
 }
 

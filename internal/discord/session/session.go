@@ -8,6 +8,7 @@ import (
 	"github.com/diamondburned/cchat"
 	"github.com/diamondburned/cchat-discord/internal/discord/folder"
 	"github.com/diamondburned/cchat-discord/internal/discord/guild"
+	"github.com/diamondburned/cchat-discord/internal/discord/private"
 	"github.com/diamondburned/cchat-discord/internal/discord/state"
 	"github.com/diamondburned/cchat-discord/internal/urlutils"
 	"github.com/diamondburned/cchat/text"
@@ -20,22 +21,31 @@ var ErrMFA = session.ErrMFA
 
 type Session struct {
 	empty.Session
-	*state.Instance
+	private cchat.Server
+	state   *state.Instance
 }
 
 func NewFromInstance(i *state.Instance) (cchat.Session, error) {
-	return &Session{Instance: i}, nil
+	priv, err := private.New(i)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to make main private server")
+	}
+
+	return &Session{
+		private: priv,
+		state:   i,
+	}, nil
 }
 
 func (s *Session) ID() cchat.ID {
-	return s.UserID.String()
+	return s.state.UserID.String()
 }
 
 func (s *Session) Name() text.Rich {
-	u, err := s.Store.Me()
+	u, err := s.state.Store.Me()
 	if err != nil {
 		// This shouldn't happen, ever.
-		return text.Rich{Content: "<@" + s.UserID.String() + ">"}
+		return text.Rich{Content: "<@" + s.state.UserID.String() + ">"}
 	}
 
 	return text.Rich{Content: u.Username + "#" + u.Discriminator}
@@ -44,7 +54,7 @@ func (s *Session) Name() text.Rich {
 func (s *Session) AsIconer() cchat.Iconer { return s }
 
 func (s *Session) Icon(ctx context.Context, iconer cchat.IconContainer) (func(), error) {
-	u, err := s.Me()
+	u, err := s.state.Me()
 	if err != nil {
 		return nil, errors.Wrap(err, "Failed to get the current user")
 	}
@@ -52,28 +62,28 @@ func (s *Session) Icon(ctx context.Context, iconer cchat.IconContainer) (func(),
 	// Thanks to arikawa, AvatarURL is never empty.
 	iconer.SetIcon(urlutils.AvatarURL(u.AvatarURL()))
 
-	return s.AddHandler(func(*gateway.UserUpdateEvent) {
+	return s.state.AddHandler(func(*gateway.UserUpdateEvent) {
 		// Bypass the event and use the state cache.
-		if u, err := s.Store.Me(); err == nil {
+		if u, err := s.state.Store.Me(); err == nil {
 			iconer.SetIcon(urlutils.AvatarURL(u.AvatarURL()))
 		}
 	}), nil
 }
 
 func (s *Session) Disconnect() error {
-	return s.Close()
+	return s.state.Close()
 }
 
-func (s *Session) AsSessionSaver() cchat.SessionSaver { return s.Instance }
+func (s *Session) AsSessionSaver() cchat.SessionSaver { return s.state }
 
 func (s *Session) Servers(container cchat.ServersContainer) error {
 	// Reset the entire container when the session is closed.
-	s.AddHandler(func(*session.Closed) {
+	s.state.AddHandler(func(*session.Closed) {
 		container.SetServers(nil)
 	})
 
 	// Set the entire container again once reconnected.
-	s.AddHandler(func(*ningen.Connected) {
+	s.state.AddHandler(func(*ningen.Connected) {
 		s.servers(container)
 	})
 
@@ -81,22 +91,26 @@ func (s *Session) Servers(container cchat.ServersContainer) error {
 }
 
 func (s *Session) servers(container cchat.ServersContainer) error {
+	// TODO: remove this once v2 is used, so we could swap it with a getter.
+	ready := s.state.Ready
+
 	switch {
 	// If the user has guild folders:
-	case len(s.Ready.Settings.GuildFolders) > 0:
+	case len(ready.Settings.GuildFolders) > 0:
 		// TODO: account for missing guilds.
-		var toplevels = make([]cchat.Server, 0, len(s.Ready.Settings.GuildFolders))
+		toplevels := make([]cchat.Server, 1, len(ready.Settings.GuildFolders)+1)
+		toplevels[0] = s.private
 
-		for _, guildFolder := range s.Ready.Settings.GuildFolders {
+		for _, guildFolder := range ready.Settings.GuildFolders {
 			// TODO: correct.
 			switch {
 			case guildFolder.ID != 0:
 				fallthrough
 			case len(guildFolder.GuildIDs) > 1:
-				toplevels = append(toplevels, folder.New(s.Instance, guildFolder))
+				toplevels = append(toplevels, folder.New(s.state, guildFolder))
 
 			case len(guildFolder.GuildIDs) == 1:
-				g, err := guild.NewFromID(s.Instance, guildFolder.GuildIDs[0])
+				g, err := guild.NewFromID(s.state, guildFolder.GuildIDs[0])
 				if err != nil {
 					continue
 				}
@@ -108,11 +122,12 @@ func (s *Session) servers(container cchat.ServersContainer) error {
 
 	// If the user doesn't have guild folders but has sorted their guilds
 	// before:
-	case len(s.Ready.Settings.GuildPositions) > 0:
-		var guilds = make([]cchat.Server, 0, len(s.Ready.Settings.GuildPositions))
+	case len(ready.Settings.GuildPositions) > 0:
+		guilds := make([]cchat.Server, 1, len(ready.Settings.GuildPositions)+1)
+		guilds[0] = s.private
 
-		for _, id := range s.Ready.Settings.GuildPositions {
-			g, err := guild.NewFromID(s.Instance, id)
+		for _, id := range ready.Settings.GuildPositions {
+			g, err := guild.NewFromID(s.state, id)
 			if err != nil {
 				continue
 			}
@@ -123,14 +138,16 @@ func (s *Session) servers(container cchat.ServersContainer) error {
 
 	// None of the above:
 	default:
-		g, err := s.Guilds()
+		g, err := s.state.Guilds()
 		if err != nil {
 			return err
 		}
 
-		var servers = make([]cchat.Server, len(g))
+		servers := make([]cchat.Server, len(g)+1)
+		servers[0] = s.private
+
 		for i := range g {
-			servers[i] = guild.New(s.Instance, &g[i])
+			servers[i+1] = guild.New(s.state, &g[i])
 		}
 
 		container.SetServers(servers)

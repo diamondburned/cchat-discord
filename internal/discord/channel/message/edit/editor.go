@@ -8,10 +8,10 @@ import (
 )
 
 type Editor struct {
-	*shared.Channel
+	shared.Channel
 }
 
-func New(ch *shared.Channel) cchat.Editor {
+func New(ch shared.Channel) cchat.Editor {
 	return Editor{ch}
 }
 

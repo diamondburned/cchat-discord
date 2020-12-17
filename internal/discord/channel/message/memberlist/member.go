@@ -17,13 +17,13 @@ import (
 )
 
 type Member struct {
-	channel  *shared.Channel
+	channel  shared.Channel
 	userID   discord.UserID
 	origName string // use if cache is stale
 }
 
 // New creates a new list member. it.Member must not be nil.
-func NewMember(ch *shared.Channel, opItem gateway.GuildMemberListOpItem) cchat.ListMember {
+func NewMember(ch shared.Channel, opItem gateway.GuildMemberListOpItem) cchat.ListMember {
 	return &Member{
 		channel:  ch,
 		userID:   opItem.Member.User.ID,

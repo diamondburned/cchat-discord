@@ -17,7 +17,6 @@ type messageHeader struct {
 	time      discord.Timestamp
 	channelID discord.ChannelID
 	guildID   discord.GuildID
-	nonce     string
 }
 
 var _ cchat.MessageHeader = (*messageHeader)(nil)
@@ -28,7 +27,6 @@ func newHeader(msg discord.Message) messageHeader {
 		time:      msg.Timestamp,
 		channelID: msg.ChannelID,
 		guildID:   msg.GuildID,
-		nonce:     msg.Nonce,
 	}
 	if msg.EditedTimestamp.IsValid() {
 		h.time = msg.EditedTimestamp
@@ -49,6 +47,10 @@ func (m messageHeader) ID() cchat.ID {
 	return m.id.String()
 }
 
+func (m messageHeader) MessageID() discord.MessageID { return m.id }
+func (m messageHeader) ChannelID() discord.ChannelID { return m.channelID }
+func (m messageHeader) GuildID() discord.GuildID     { return m.guildID }
+
 func (m messageHeader) Time() time.Time {
 	return m.time.Time()
 }
@@ -67,7 +69,6 @@ var (
 	_ cchat.MessageCreate = (*Message)(nil)
 	_ cchat.MessageUpdate = (*Message)(nil)
 	_ cchat.MessageDelete = (*Message)(nil)
-	_ cchat.Noncer        = (*Message)(nil)
 )
 
 func NewMessageUpdateContent(msg discord.Message, s *state.Instance) Message {
@@ -181,10 +182,6 @@ func (m Message) Author() cchat.Author {
 
 func (m Message) Content() text.Rich {
 	return m.content
-}
-
-func (m Message) Nonce() string {
-	return m.nonce
 }
 
 func (m Message) Mentioned() bool {

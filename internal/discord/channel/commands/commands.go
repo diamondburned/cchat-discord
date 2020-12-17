@@ -29,7 +29,7 @@ func (cmds Commands) Help() []byte {
 
 // Run runs a command with the given words. It errors out if the command is not
 // found.
-func (cmds Commands) Run(ch *shared.Channel, words []string) ([]byte, error) {
+func (cmds Commands) Run(ch shared.Channel, words []string) ([]byte, error) {
 	if words[0] == "help" {
 		return cmds.Help(), nil
 	}
@@ -80,7 +80,7 @@ var World = Commands{
 		Name: "send-embed",
 		Args: Arguments{"-t title", "-c color", "description"},
 		Desc: "Send a basic embed to the current channel",
-		RunFunc: func(ch *shared.Channel, argv []string) ([]byte, error) {
+		RunFunc: func(ch shared.Channel, argv []string) ([]byte, error) {
 			var embed discord.Embed
 			var color uint // no Uint32Var
 
@@ -107,7 +107,7 @@ var World = Commands{
 	{
 		Name: "info",
 		Desc: "Print information as JSON",
-		RunFunc: func(ch *shared.Channel, argv []string) ([]byte, error) {
+		RunFunc: func(ch shared.Channel, argv []string) ([]byte, error) {
 			channel, err := ch.State.Channel(ch.ID)
 			if err != nil {
 				return nil, errors.Wrap(err, "failed to get channel")
@@ -124,7 +124,7 @@ var World = Commands{
 	{
 		Name: "list-channels",
 		Desc: "Print all channels of this guild and their topics",
-		RunFunc: func(ch *shared.Channel, argv []string) ([]byte, error) {
+		RunFunc: func(ch shared.Channel, argv []string) ([]byte, error) {
 			channels, err := ch.State.Channels(ch.GuildID)
 			if err != nil {
 				return nil, errors.Wrap(err, "failed to get channels")
@@ -142,7 +142,7 @@ var World = Commands{
 		Name: "presence",
 		Args: Arguments{"mention:user"},
 		Desc: "Print JSON of a member/user's presence state",
-		RunFunc: func(ch *shared.Channel, argv []string) ([]byte, error) {
+		RunFunc: func(ch shared.Channel, argv []string) ([]byte, error) {
 			if err := assertArgc(argv, 1); err != nil {
 				return nil, err
 			}
@@ -164,7 +164,7 @@ var World = Commands{
 		Name: "member",
 		Args: Arguments{"mention:user"},
 		Desc: "Print JSON of a member/user's member state",
-		RunFunc: func(ch *shared.Channel, argv []string) ([]byte, error) {
+		RunFunc: func(ch shared.Channel, argv []string) ([]byte, error) {
 			if err := assertArgc(argv, 1); err != nil {
 				return nil, err
 			}

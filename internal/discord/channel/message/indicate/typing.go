@@ -10,10 +10,10 @@ import (
 )
 
 type TypingIndicator struct {
-	*shared.Channel
+	shared.Channel
 }
 
-func NewTyping(ch *shared.Channel) cchat.TypingIndicator {
+func NewTyping(ch shared.Channel) cchat.TypingIndicator {
 	return TypingIndicator{ch}
 }
 

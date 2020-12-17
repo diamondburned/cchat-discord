@@ -31,10 +31,10 @@ func seekPrevGroup(l *member.List, ix int) (item, group gateway.GuildMemberListO
 }
 
 type MemberLister struct {
-	*shared.Channel
+	shared.Channel
 }
 
-func New(ch *shared.Channel) cchat.MemberLister {
+func New(ch shared.Channel) cchat.MemberLister {
 	return MemberLister{ch}
 }
 

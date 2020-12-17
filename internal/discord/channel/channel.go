@@ -13,21 +13,28 @@ import (
 
 type Channel struct {
 	empty.Server
-
-	*shared.Channel
+	shared.Channel
 	commander cchat.Commander
 }
 
 var _ cchat.Server = (*Channel)(nil)
 
 func New(s *state.Instance, ch discord.Channel) (cchat.Server, error) {
+	channel, err := NewChannel(s, ch)
+	if err != nil {
+		return nil, err
+	}
+	return channel, nil
+}
+
+func NewChannel(s *state.Instance, ch discord.Channel) (Channel, error) {
 	// Ensure the state keeps the channel's permission.
 	_, err := s.Permissions(ch.ID, s.UserID)
 	if err != nil {
-		return nil, errors.Wrap(err, "Failed to get permission")
+		return Channel{}, errors.Wrap(err, "Failed to get permission")
 	}
 
-	sharedCh := &shared.Channel{
+	sharedCh := shared.Channel{
 		ID:      ch.ID,
 		GuildID: ch.GuildID,
 		State:   s,
@@ -50,7 +57,7 @@ func (ch Channel) Name() text.Rich {
 	}
 
 	if c.NSFW {
-		return text.Rich{Content: "#!" + c.Name}
+		return text.Rich{Content: "#" + c.Name + " (nsfw)"}
 	} else {
 		return text.Rich{Content: "#" + c.Name}
 	}

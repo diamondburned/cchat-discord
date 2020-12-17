@@ -10,7 +10,7 @@ type Command struct {
 	Name    string
 	Args    Arguments
 	Desc    string
-	RunFunc func(*shared.Channel, []string) ([]byte, error) // words[1:]
+	RunFunc func(shared.Channel, []string) ([]byte, error) // words[1:]
 }
 
 func (cmd Command) writeHelp(builder *bytes.Buffer) {

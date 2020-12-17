@@ -23,12 +23,12 @@ import (
 
 type Messenger struct {
 	empty.Messenger
-	*shared.Channel
+	shared.Channel
 }
 
 var _ cchat.Messenger = (*Messenger)(nil)
 
-func New(ch *shared.Channel) Messenger {
+func New(ch shared.Channel) Messenger {
 	return Messenger{Channel: ch}
 }
 
@@ -129,7 +129,7 @@ func (msgr Messenger) JoinServer(ctx context.Context, ct cchat.MessagesContainer
 		}),
 	)
 
-	return funcutil.JoinCancels(addcancel()), nil
+	return funcutil.JoinCancels(addcancel()...), nil
 }
 
 func (msgr Messenger) AsSender() cchat.Sender {

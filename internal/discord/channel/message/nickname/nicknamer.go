@@ -12,10 +12,10 @@ import (
 )
 
 type Nicknamer struct {
-	*shared.Channel
+	shared.Channel
 }
 
-func New(ch *shared.Channel) cchat.Nicknamer {
+func New(ch shared.Channel) cchat.Nicknamer {
 	return Nicknamer{ch}
 }
 
