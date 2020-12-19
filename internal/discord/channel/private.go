@@ -6,8 +6,10 @@ import (
 	"github.com/diamondburned/arikawa/discord"
 	"github.com/diamondburned/arikawa/gateway"
 	"github.com/diamondburned/cchat"
+	"github.com/diamondburned/cchat-discord/internal/discord/channel/shared"
 	"github.com/diamondburned/cchat-discord/internal/discord/state"
 	"github.com/diamondburned/cchat-discord/internal/urlutils"
+	"github.com/diamondburned/cchat/text"
 	"github.com/pkg/errors"
 )
 
@@ -28,6 +30,15 @@ func NewPrivate(s *state.Instance, ch discord.Channel) (cchat.Server, error) {
 	}
 
 	return Private{Channel: channel}, nil
+}
+
+func (priv Private) Name() text.Rich {
+	c, err := priv.Self()
+	if err != nil {
+		return text.Rich{Content: priv.ID()}
+	}
+
+	return text.Plain(shared.PrivateName(*c))
 }
 
 func (priv Private) AsIconer() cchat.Iconer {

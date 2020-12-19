@@ -105,6 +105,12 @@ github.com/diamondburned/cchat v0.3.11 h1:C1f9Tp7Kz3t+T1SlepL1RS7b/kACAKWAIZXAgJ
 github.com/diamondburned/cchat v0.3.11/go.mod h1:IlMtF+XIvAJh0GL/2yFdf0/34w+Hdy5A1GgvSwAXtQI=
 github.com/diamondburned/cchat v0.3.12 h1:mew54lsDrwrJs4U2FtdbNFl/wAZcueIgZCsImHQzVL4=
 github.com/diamondburned/cchat v0.3.12/go.mod h1:IlMtF+XIvAJh0GL/2yFdf0/34w+Hdy5A1GgvSwAXtQI=
+github.com/diamondburned/cchat v0.3.13 h1:qSAo8FJDvEi9o8kLQJ5Mbo4jrfb+sd1Muo1sx8ruBo8=
+github.com/diamondburned/cchat v0.3.13/go.mod h1:IlMtF+XIvAJh0GL/2yFdf0/34w+Hdy5A1GgvSwAXtQI=
+github.com/diamondburned/cchat v0.3.14 h1:nDr9DJ1EW3kab4gieE+DLhpvHRws+umWpw5XrOmlNyc=
+github.com/diamondburned/cchat v0.3.14/go.mod h1:IlMtF+XIvAJh0GL/2yFdf0/34w+Hdy5A1GgvSwAXtQI=
+github.com/diamondburned/cchat v0.3.15 h1:BJf8ZiRtDWTGMtQ3QqjNU0H+784WSrkJEpFGkKY5gEw=
+github.com/diamondburned/cchat v0.3.15/go.mod h1:IlMtF+XIvAJh0GL/2yFdf0/34w+Hdy5A1GgvSwAXtQI=
 github.com/diamondburned/ningen v0.1.1-0.20200621014632-6babb812b249 h1:yP7kJ+xCGpDz6XbcfACJcju4SH1XDPwlrvbofz3lP8I=
 github.com/diamondburned/ningen v0.1.1-0.20200621014632-6babb812b249/go.mod h1:xW9hpBZsGi8KpAh10TyP+YQlYBo+Xc+2w4TR6N0951A=
 github.com/diamondburned/ningen v0.1.1-0.20200708085949-b64e350f3b8c h1:3h/kyk6HplYZF3zLi106itjYJWjbuMK/twijeGLEy2M=
@@ -204,6 +210,8 @@ github.com/kisielk/gotool v1.0.0/go.mod h1:XhKaO+MFFWcvkIS/tQcRk01m1F5IRFswLeQ+o
 github.com/kr/pretty v0.1.0/go.mod h1:dAy3ld7l9f0ibDNOQOHHMYYIIbhfbHSm3C4ZsoJORNo=
 github.com/kr/pty v1.1.1/go.mod h1:pFQYn66WHrOpPYNljwOMqo10TkYh1fy3cYio2l3bCsQ=
 github.com/kr/text v0.1.0/go.mod h1:4Jbv+DJW3UT/LiOwJeYQe1efqtUx/iVham/4vfdArNI=
+github.com/lithammer/fuzzysearch v1.1.1 h1:8F9OAV2xPuYblToVohjanztdnPjbtA0MLgMvDKQ0Z08=
+github.com/lithammer/fuzzysearch v1.1.1/go.mod h1:H2bng+w5gsR7NlfIJM8ElGZI0sX6C/9uzGqicVXGU6c=
 github.com/pkg/errors v0.9.1 h1:FEBLx1zS214owpjy7qsBeixbURkuhQAwrK5UwLGTwt4=
 github.com/pkg/errors v0.9.1/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINEl0=
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
@@ -295,6 +303,7 @@ golang.org/x/sys v0.0.0-20200223170610-d5e6a3e2c0ae/go.mod h1:h1NjWce9XRLGQEsW7w
 golang.org/x/text v0.0.0-20170915032832-14c0d48ead0c/go.mod h1:NqM8EUOU14njkJ3fqMW+pc6Ldnwhi/IjpwHt7yyuwOQ=
 golang.org/x/text v0.3.0/go.mod h1:NqM8EUOU14njkJ3fqMW+pc6Ldnwhi/IjpwHt7yyuwOQ=
 golang.org/x/text v0.3.1-0.20180807135948-17ff2d5776d2/go.mod h1:NqM8EUOU14njkJ3fqMW+pc6Ldnwhi/IjpwHt7yyuwOQ=
+golang.org/x/text v0.3.2 h1:tW2bmiBqwgJj/UpqtC8EpXEZVYOwU0yG4iWbprSVAcs=
 golang.org/x/text v0.3.2/go.mod h1:bEr9sfX3Q8Zfm5fL9x+3itogRgK3+ptLWKqgva+5dAk=
 golang.org/x/time v0.0.0-20181108054448-85acf8d2951c/go.mod h1:tRJNPiyCQ0inRvYxbN9jk5I+vvW/OXSQhTDSoE431IQ=
 golang.org/x/time v0.0.0-20190308202827-9d24e82272b4/go.mod h1:tRJNPiyCQ0inRvYxbN9jk5I+vvW/OXSQhTDSoE431IQ=

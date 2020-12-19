@@ -10,18 +10,20 @@ import (
 	"github.com/diamondburned/arikawa/state"
 	"github.com/diamondburned/arikawa/utils/httputil/httpdriver"
 	"github.com/diamondburned/cchat"
+	"github.com/diamondburned/cchat-discord/internal/discord/state/nonce"
 	"github.com/diamondburned/ningen"
 	"github.com/pkg/errors"
 )
 
 type Instance struct {
 	*ningen.State
+	Nonces *nonce.Map
+
+	// UserID is a constant user ID. It is guaranteed to be valid.
 	UserID discord.UserID
 }
 
-var (
-	_ cchat.SessionSaver = (*Instance)(nil)
-)
+var _ cchat.SessionSaver = (*Instance)(nil)
 
 // ErrInvalidSession is returned if SessionRestore is given a bad session.
 var ErrInvalidSession = errors.New("invalid session")
@@ -58,12 +60,12 @@ func New(s *state.State) (*Instance, error) {
 	// Prefetch user.
 	u, err := s.Me()
 	if err != nil {
-		return nil, errors.Wrap(err, "Failed to get current user")
+		return nil, errors.Wrap(err, "failed to get current user")
 	}
 
 	n, err := ningen.FromState(s)
 	if err != nil {
-		return nil, errors.Wrap(err, "Failed to create a state wrapper")
+		return nil, errors.Wrap(err, "failed to create a state wrapper")
 	}
 
 	n.Client.OnRequest = append(n.Client.OnRequest, func(r httpdriver.Request) error {
@@ -78,6 +80,7 @@ func New(s *state.State) (*Instance, error) {
 	return &Instance{
 		UserID: u.ID,
 		State:  n,
+		Nonces: new(nonce.Map),
 	}, nil
 }
 

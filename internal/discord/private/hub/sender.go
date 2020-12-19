@@ -7,7 +7,9 @@ import (
 	"github.com/diamondburned/arikawa/discord"
 	"github.com/diamondburned/cchat"
 	"github.com/diamondburned/cchat-discord/internal/discord/channel/message/send"
+	"github.com/diamondburned/cchat-discord/internal/discord/channel/message/send/complete"
 	"github.com/diamondburned/cchat-discord/internal/discord/state"
+	"github.com/diamondburned/cchat-discord/internal/discord/state/nonce"
 	"github.com/diamondburned/cchat/utils/empty"
 	"github.com/pkg/errors"
 )
@@ -17,18 +19,26 @@ type ChannelAdder interface {
 	AddChannel(state *state.Instance, ch *discord.Channel)
 }
 
+// TODO: unexport Sender
+
 type Sender struct {
 	empty.Sender
-	adder  ChannelAdder
-	acList *activeList
-	state  *state.Instance
+	adder    ChannelAdder
+	acList   *activeList
+	sentMsgs *nonce.Set
+	state    *state.Instance
+
+	completers complete.Completer
 }
 
-func NewSender(s *state.Instance, acList *activeList, adder ChannelAdder) *Sender {
-	return &Sender{adder: adder, acList: acList, state: s}
-}
-
-var mentionRegex = regexp.MustCompile(`^<@!?(\d+)> ?`)
+// mentionRegex matche the following:
+//
+//    <#123123>
+//    <#!12312> // This is OK because we're not sending it.
+//    <@123123>
+//    <@!12312>
+//
+var mentionRegex = regexp.MustCompile(`(?m)^<(@|#)!?(\d+)> ?`)
 
 // wrappedMessage wraps around a SendableMessage to override its content.
 type wrappedMessage struct {
@@ -48,28 +58,40 @@ func (s *Sender) Send(sendable cchat.SendableMessage) error {
 	// Validate message.
 	matches := mentionRegex.FindStringSubmatch(content)
 	if matches == nil {
-		return errors.New("messages sent here must start with a mention")
+		return errors.New("message must start with a user or channel mention")
 	}
 
-	targetID, err := discord.ParseSnowflake(matches[1])
+	// TODO: account for channel names
+
+	targetID, err := discord.ParseSnowflake(matches[2])
 	if err != nil {
 		return errors.Wrap(err, "failed to parse recipient ID")
 	}
 
-	ch, err := s.state.CreatePrivateChannel(discord.UserID(targetID))
-	if err != nil {
-		return errors.Wrap(err, "failed to find DM channel")
+	var channel *discord.Channel
+	switch matches[1] {
+	case "@":
+		channel, _ = s.state.CreatePrivateChannel(discord.UserID(targetID))
+	case "#":
+		channel, _ = s.state.Channel(discord.ChannelID(targetID))
+	}
+	if channel == nil {
+		return errors.New("unknown channel")
 	}
 
-	s.adder.AddChannel(s.state, ch)
-	s.acList.add(ch.ID)
+	s.adder.AddChannel(s.state, channel)
+	s.acList.add(channel.ID)
 
-	return send.Send(s.state, ch.ID, wrappedMessage{
-		SendableMessage: sendable,
-		content:         strings.TrimPrefix(content, matches[0]),
-	})
+	sendData := send.WrapMessage(s.state, sendable)
+	sendData.Content = strings.TrimPrefix(content, matches[0])
+
+	// Store the nonce.
+	s.sentMsgs.Store(sendData.Nonce)
+
+	_, err = s.state.SendMessageComplex(channel.ID, sendData)
+	return errors.Wrap(err, "failed to send message")
 }
 
-// func (msgs *Messages) AsCompleter() cchat.Completer {
-// 	return complete.New(msgs)
-// }
+func (s *Sender) AsCompleter() cchat.Completer {
+	return s.completers
+}

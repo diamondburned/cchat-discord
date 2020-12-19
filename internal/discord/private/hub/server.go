@@ -60,11 +60,16 @@ func (acList *activeList) isActive(channelID discord.ChannelID) bool {
 	return ok
 }
 
-func (acList *activeList) add(chID discord.ChannelID) {
+func (acList *activeList) add(chID discord.ChannelID) (changed bool) {
 	acList.mut.Lock()
 	defer acList.mut.Unlock()
 
+	if _, ok := acList.active[chID]; ok {
+		return false
+	}
+
 	acList.active[chID] = struct{}{}
+	return true
 }
 
 // Server is the server (channel) that contains all incoming DM messages that

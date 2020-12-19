@@ -1,8 +1,6 @@
 package complete
 
 import (
-	"strings"
-
 	"github.com/diamondburned/arikawa/discord"
 	"github.com/diamondburned/cchat"
 	"github.com/diamondburned/cchat-discord/internal/discord/state"
@@ -10,43 +8,54 @@ import (
 	"github.com/diamondburned/cchat/text"
 )
 
-func (ch Completer) CompleteEmojis(word string) (entries []cchat.CompletionEntry) {
-	return CompleteEmojis(ch.State, ch.GuildID, word)
+func (ch ChannelCompleter) CompleteEmojis(word string) (entries []cchat.CompletionEntry) {
+	return Emojis(ch.State, ch.GuildID, word)
 }
 
-func CompleteEmojis(s *state.Instance, gID discord.GuildID, word string) []cchat.CompletionEntry {
+func Emojis(s *state.Instance, gID discord.GuildID, word string) []cchat.CompletionEntry {
 	// Ignore if empty word.
 	if word == "" {
 		return nil
 	}
 
-	e, err := s.EmojiState.Get(gID)
+	guilds, err := s.EmojiState.Get(gID)
 	if err != nil {
 		return nil
 	}
 
-	var match = strings.ToLower(word)
-	var entries = make([]cchat.CompletionEntry, 0, MaxCompletion)
+	var entries []cchat.CompletionEntry
+	var distances map[string]int
 
-	for _, guild := range e {
+GuildSearch:
+	for _, guild := range guilds {
 		for _, emoji := range guild.Emojis {
-			if !contains(match, emoji.Name) {
+			rank := rankFunc(word, emoji.Name)
+			if rank == -1 {
 				continue
 			}
 
+			// Defer allocation until we've found something.
+			ensureEntriesMade(&entries)
+			ensureDistancesMade(&distances)
+
+			raw := emoji.String()
+
 			entries = append(entries, cchat.CompletionEntry{
-				Raw:       emoji.String(),
+				Raw:       raw,
 				Text:      text.Rich{Content: ":" + emoji.Name + ":"},
 				Secondary: text.Rich{Content: guild.Name},
 				IconURL:   urlutils.Sized(emoji.EmojiURL(), 32), // small
 				Image:     true,
 			})
 
+			distances[raw] = rank
+
 			if len(entries) >= MaxCompletion {
-				return entries
+				break GuildSearch
 			}
 		}
 	}
 
+	sortDistances(entries, distances)
 	return entries
 }

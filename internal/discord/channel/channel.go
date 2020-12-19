@@ -53,7 +53,7 @@ func (ch Channel) ID() cchat.ID {
 func (ch Channel) Name() text.Rich {
 	c, err := ch.Self()
 	if err != nil {
-		return text.Rich{Content: ch.Channel.ID.String()}
+		return text.Rich{Content: ch.ID()}
 	}
 
 	if c.NSFW {

@@ -7,8 +7,11 @@ import (
 	"github.com/diamondburned/arikawa/discord"
 	"github.com/diamondburned/arikawa/gateway"
 	"github.com/diamondburned/cchat"
+	"github.com/diamondburned/cchat-discord/internal/discord/channel/message/send/complete"
+	"github.com/diamondburned/cchat-discord/internal/discord/channel/shared"
 	"github.com/diamondburned/cchat-discord/internal/discord/message"
 	"github.com/diamondburned/cchat-discord/internal/discord/state"
+	"github.com/diamondburned/cchat-discord/internal/discord/state/nonce"
 	"github.com/diamondburned/cchat-discord/internal/funcutil"
 	"github.com/diamondburned/cchat/utils/empty"
 )
@@ -52,8 +55,9 @@ func (list *messageList) delete(id discord.MessageID) {
 type Messages struct {
 	empty.Messenger
 
-	state  *state.Instance
-	acList *activeList
+	state    *state.Instance
+	acList   *activeList
+	sentMsgs *nonce.Set
 
 	sender *Sender
 
@@ -64,11 +68,37 @@ type Messages struct {
 }
 
 func NewMessages(s *state.Instance, acList *activeList, adder ChannelAdder) *Messages {
+	var sentMsgs nonce.Set
+
 	hubServer := &Messages{
 		state:    s,
 		acList:   acList,
-		sender:   NewSender(s, acList, adder),
+		sentMsgs: &sentMsgs,
+		sender: &Sender{
+			adder:    adder,
+			acList:   acList,
+			sentMsgs: &sentMsgs,
+			state:    s,
+		},
 		messages: make(messageList, 0, 100),
+	}
+
+	hubServer.sender.completers = complete.Completer{
+		':': func(word string) []cchat.CompletionEntry {
+			return complete.Emojis(s, 0, word)
+		},
+		'@': func(word string) []cchat.CompletionEntry {
+			if word != "" {
+				return complete.Presences(s, word)
+			}
+
+			hubServer.msgMutex.Lock()
+			defer hubServer.msgMutex.Unlock()
+			return complete.MessageMentions(hubServer.messages)
+		},
+		'#': func(word string) []cchat.CompletionEntry {
+			return complete.DMChannels(s, word)
+		},
 	}
 
 	hubServer.cancel = funcutil.JoinCancels(
@@ -76,6 +106,9 @@ func NewMessages(s *state.Instance, acList *activeList, adder ChannelAdder) *Mes
 			if msg.GuildID.IsValid() || acList.isActive(msg.ChannelID) {
 				return
 			}
+
+			// We're not adding back messages we sent here, since we already
+			// have a separate channel for that.
 
 			hubServer.msgMutex.Lock()
 			hubServer.messages.append(msg.Message)
@@ -122,11 +155,32 @@ func (msgs *Messages) JoinServer(ctx context.Context, ct cchat.MessagesContainer
 	// Bind the handler.
 	return funcutil.JoinCancels(
 		msgs.state.AddHandler(func(msg *gateway.MessageCreateEvent) {
-			if msg.GuildID.IsValid() || msgs.acList.isActive(msg.ChannelID) {
+			if msg.GuildID.IsValid() {
 				return
 			}
 
-			ct.CreateMessage(message.NewMessageCreate(msg, msgs.state))
+			var isReply = false
+			if msgs.acList.isActive(msg.ChannelID) {
+				if !msgs.sentMsgs.HasAndDelete(msg.Nonce) {
+					return
+				}
+				isReply = true
+			}
+
+			var author = message.NewUser(msg.Author, msgs.state)
+			if isReply {
+				c, err := msgs.state.Channel(msg.ChannelID)
+				if err == nil {
+					switch c.Type {
+					case discord.DirectMessage:
+						author.AddUserReply(c.DMRecipients[0], msgs.state)
+					case discord.GroupDM:
+						author.AddReply(shared.PrivateName(*c))
+					}
+				}
+			}
+
+			ct.CreateMessage(message.NewMessage(msg.Message, msgs.state, author))
 			msgs.state.ReadState.MarkRead(msg.ChannelID, msg.ID)
 		}),
 		msgs.state.AddHandler(func(update *gateway.MessageUpdateEvent) {

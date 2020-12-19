@@ -28,11 +28,11 @@ type Messenger struct {
 
 var _ cchat.Messenger = (*Messenger)(nil)
 
-func New(ch shared.Channel) Messenger {
-	return Messenger{Channel: ch}
+func New(ch shared.Channel) *Messenger {
+	return &Messenger{Channel: ch}
 }
 
-func (msgr Messenger) JoinServer(ctx context.Context, ct cchat.MessagesContainer) (func(), error) {
+func (msgr *Messenger) JoinServer(ctx context.Context, ct cchat.MessagesContainer) (func(), error) {
 	state := msgr.State.WithContext(ctx)
 
 	m, err := state.Messages(msgr.ID)
@@ -112,7 +112,7 @@ func (msgr Messenger) JoinServer(ctx context.Context, ct cchat.MessagesContainer
 	addcancel(
 		msgr.State.AddHandler(func(m *gateway.MessageCreateEvent) {
 			if m.ChannelID == msgr.ID {
-				ct.CreateMessage(message.NewMessageCreate(m, msgr.State))
+				ct.CreateMessage(message.NewGuildMessageCreate(m, msgr.State))
 				msgr.State.ReadState.MarkRead(msgr.ID, m.ID)
 			}
 		}),
@@ -132,7 +132,7 @@ func (msgr Messenger) JoinServer(ctx context.Context, ct cchat.MessagesContainer
 	return funcutil.JoinCancels(addcancel()...), nil
 }
 
-func (msgr Messenger) AsSender() cchat.Sender {
+func (msgr *Messenger) AsSender() cchat.Sender {
 	if !msgr.HasPermission(discord.PermissionSendMessages) {
 		return nil
 	}
@@ -140,7 +140,7 @@ func (msgr Messenger) AsSender() cchat.Sender {
 	return send.New(msgr.Channel)
 }
 
-func (msgr Messenger) AsEditor() cchat.Editor {
+func (msgr *Messenger) AsEditor() cchat.Editor {
 	if !msgr.HasPermission(discord.PermissionSendMessages) {
 		return nil
 	}
@@ -148,22 +148,22 @@ func (msgr Messenger) AsEditor() cchat.Editor {
 	return edit.New(msgr.Channel)
 }
 
-func (msgr Messenger) AsActioner() cchat.Actioner {
+func (msgr *Messenger) AsActioner() cchat.Actioner {
 	return action.New(msgr.Channel)
 }
 
-func (msgr Messenger) AsNicknamer() cchat.Nicknamer {
+func (msgr *Messenger) AsNicknamer() cchat.Nicknamer {
 	return nickname.New(msgr.Channel)
 }
 
-func (msgr Messenger) AsMemberLister() cchat.MemberLister {
+func (msgr *Messenger) AsMemberLister() cchat.MemberLister {
 	if !msgr.GuildID.IsValid() {
 		return nil
 	}
 	return memberlist.New(msgr.Channel)
 }
 
-func (msgr Messenger) AsBacklogger() cchat.Backlogger {
+func (msgr *Messenger) AsBacklogger() cchat.Backlogger {
 	if !msgr.HasPermission(discord.PermissionViewChannel, discord.PermissionReadMessageHistory) {
 		return nil
 	}
@@ -171,10 +171,10 @@ func (msgr Messenger) AsBacklogger() cchat.Backlogger {
 	return backlog.New(msgr.Channel)
 }
 
-func (msgr Messenger) AsTypingIndicator() cchat.TypingIndicator {
+func (msgr *Messenger) AsTypingIndicator() cchat.TypingIndicator {
 	return indicate.NewTyping(msgr.Channel)
 }
 
-func (msgr Messenger) AsUnreadIndicator() cchat.UnreadIndicator {
+func (msgr *Messenger) AsUnreadIndicator() cchat.UnreadIndicator {
 	return indicate.NewUnread(msgr.Channel)
 }

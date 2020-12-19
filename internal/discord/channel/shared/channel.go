@@ -1,11 +1,43 @@
+// Package shared contains channel utilities.
 package shared
 
 import (
 	"errors"
+	"strings"
 
 	"github.com/diamondburned/arikawa/discord"
 	"github.com/diamondburned/cchat-discord/internal/discord/state"
 )
+
+// PrivateName returns the channel name if any, otherwise it formats its own
+// name into a list of recipients.
+func PrivateName(privCh discord.Channel) string {
+	if privCh.Name != "" {
+		return privCh.Name
+	}
+
+	return FormatRecipients(privCh.DMRecipients)
+}
+
+// FormatRecipients joins the given list of users into a string listing all
+// recipients with English punctuation rules.
+func FormatRecipients(users []discord.User) string {
+	switch len(users) {
+	case 0:
+		return "<Nobody>"
+	case 1:
+		return users[0].Username
+	case 2:
+		return users[0].Username + " and " + users[1].Username
+	}
+
+	var usernames = make([]string, len(users))
+	for i, user := range users[:len(users)-1] {
+		usernames[i] = user.Username
+	}
+
+	return strings.Join(usernames, ", ") + " and " + users[len(users)-1].Username
+}
 
 type Channel struct {
 	ID      discord.ChannelID

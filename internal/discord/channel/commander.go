@@ -12,13 +12,13 @@ import (
 
 type Commander struct {
 	shared.Channel
-	msgCompl complete.Completer
+	msgCompl complete.ChannelCompleter
 }
 
 func NewCommander(ch shared.Channel) cchat.Commander {
 	return Commander{
 		Channel: ch,
-		msgCompl: complete.Completer{
+		msgCompl: complete.ChannelCompleter{
 			Channel: ch,
 		},
 	}

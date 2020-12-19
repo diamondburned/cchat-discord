@@ -15,6 +15,7 @@ import (
 type messageHeader struct {
 	id        discord.MessageID
 	time      discord.Timestamp
+	nonce     string
 	channelID discord.ChannelID
 	guildID   discord.GuildID
 }
@@ -34,6 +35,12 @@ func newHeader(msg discord.Message) messageHeader {
 	return h
 }
 
+func newHeaderNonce(msg discord.Message, nonce string) messageHeader {
+	h := newHeader(msg)
+	h.nonce = nonce
+	return h
+}
+
 func NewHeaderDelete(d *gateway.MessageDeleteEvent) messageHeader {
 	return messageHeader{
 		id:        d.ID,
@@ -46,6 +53,8 @@ func NewHeaderDelete(d *gateway.MessageDeleteEvent) messageHeader {
 func (m messageHeader) ID() cchat.ID {
 	return m.id.String()
 }
+
+func (m messageHeader) Nonce() string { return m.nonce }
 
 func (m messageHeader) MessageID() discord.MessageID { return m.id }
 func (m messageHeader) ChannelID() discord.ChannelID { return m.channelID }
@@ -69,6 +78,7 @@ var (
 	_ cchat.MessageCreate = (*Message)(nil)
 	_ cchat.MessageUpdate = (*Message)(nil)
 	_ cchat.MessageDelete = (*Message)(nil)
+	_ cchat.Noncer        = (*Message)(nil)
 )
 
 func NewMessageUpdateContent(msg discord.Message, s *state.Instance) Message {
@@ -97,13 +107,18 @@ func NewMessageUpdateAuthor(
 	}
 }
 
-// NewMessageCreate uses the session to create a message. It does not do
-// API calls. Member is optional.
-func NewMessageCreate(c *gateway.MessageCreateEvent, s *state.Instance) Message {
+// NewGuildMessageCreate uses the session to create a message. It does not do
+// API calls. Member is optional. This is the only call that populates the Nonce
+// in the header.
+func NewGuildMessageCreate(c *gateway.MessageCreateEvent, s *state.Instance) Message {
+	// Copy and change the nonce.
+	message := c.Message
+	message.Nonce = s.Nonces.Load(c.Nonce)
+
 	// This should not error.
 	g, err := s.Store.Guild(c.GuildID)
 	if err != nil {
-		return NewMessage(c.Message, s, NewUser(c.Author, s))
+		return NewMessage(message, s, NewUser(c.Author, s))
 	}
 
 	if c.Member == nil {
@@ -111,10 +126,10 @@ func NewMessageCreate(c *gateway.MessageCreateEvent, s *state.Instance) Message 
 	}
 	if c.Member == nil {
 		s.MemberState.RequestMember(c.GuildID, c.Author.ID)
-		return NewMessage(c.Message, s, NewUser(c.Author, s))
+		return NewMessage(message, s, NewUser(c.Author, s))
 	}
 
-	return NewMessage(c.Message, s, NewGuildMember(*c.Member, *g, s))
+	return NewMessage(message, s, NewGuildMember(*c.Member, *g, s))
 }
 
 // NewBacklogMessage uses the session to create a message fetched from the
@@ -167,7 +182,7 @@ func NewMessage(m discord.Message, s *state.Instance, author Author) Message {
 	}
 
 	return Message{
-		messageHeader: newHeader(m),
+		messageHeader: newHeaderNonce(m, m.Nonce),
 		author:        author,
 		content:       content,
 	}
@@ -182,6 +197,10 @@ func (m Message) Author() cchat.Author {
 
 func (m Message) Content() text.Rich {
 	return m.content
+}
+
+func (m Message) Nonce() string {
+	return m.nonce
 }
 
 func (m Message) Mentioned() bool {

@@ -9,6 +9,18 @@ import (
 	"github.com/diamondburned/cchat-discord/internal/discord/state"
 )
 
+func WrapMessage(s *state.Instance, msg cchat.SendableMessage) api.SendMessageData {
+	var send = api.SendMessageData{Content: msg.Content()}
+	if attacher := msg.AsAttachments(); attacher != nil {
+		send.Files = addAttachments(attacher.Attachments())
+	}
+	if noncer := msg.AsNoncer(); noncer != nil {
+		send.Nonce = s.Nonces.Generate(noncer.Nonce())
+	}
+
+	return send
+}
+
 type Sender struct {
 	shared.Channel
 }
@@ -20,16 +32,7 @@ func New(ch shared.Channel) Sender {
 }
 
 func (s Sender) Send(msg cchat.SendableMessage) error {
-	return Send(s.State, s.ID, msg)
-}
-
-func Send(s *state.Instance, chID discord.ChannelID, msg cchat.SendableMessage) error {
-	var send = api.SendMessageData{Content: msg.Content()}
-	if attacher := msg.AsAttachments(); attacher != nil {
-		send.Files = addAttachments(attacher.Attachments())
-	}
-
-	_, err := s.SendMessageComplex(chID, send)
+	_, err := s.State.SendMessageComplex(s.ID, WrapMessage(s.State, msg))
 	return err
 }
 
