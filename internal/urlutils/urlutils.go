@@ -11,7 +11,7 @@ import (
 
 // AvatarURL wraps the URL with URL queries for the avatar.
 func AvatarURL(URL string) string {
-	return Sized(URL, 64)
+	return Sized(URL, 128)
 }
 
 // Sized wraps the URL with the size query.
