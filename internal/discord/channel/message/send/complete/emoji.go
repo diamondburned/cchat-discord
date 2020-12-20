@@ -1,7 +1,7 @@
 package complete
 
 import (
-	"github.com/diamondburned/arikawa/discord"
+	"github.com/diamondburned/arikawa/v2/discord"
 	"github.com/diamondburned/cchat"
 	"github.com/diamondburned/cchat-discord/internal/discord/state"
 	"github.com/diamondburned/cchat-discord/internal/urlutils"

@@ -3,8 +3,8 @@ package message
 import (
 	"time"
 
-	"github.com/diamondburned/arikawa/discord"
-	"github.com/diamondburned/arikawa/gateway"
+	"github.com/diamondburned/arikawa/v2/discord"
+	"github.com/diamondburned/arikawa/v2/gateway"
 	"github.com/diamondburned/cchat"
 	"github.com/diamondburned/cchat-discord/internal/discord/state"
 	"github.com/diamondburned/cchat-discord/internal/segments"
@@ -85,13 +85,13 @@ func NewMessageUpdateContent(msg discord.Message, s *state.Instance) Message {
 	// Check if content is empty.
 	if msg.Content == "" {
 		// Then grab the content from the state.
-		m, err := s.Store.Message(msg.ChannelID, msg.ID)
+		m, err := s.Cabinet.Message(msg.ChannelID, msg.ID)
 		if err == nil {
 			msg.Content = m.Content
 		}
 	}
 
-	var content = segments.ParseMessage(&msg, s.Store)
+	var content = segments.ParseMessage(&msg, s.Cabinet)
 	return Message{
 		messageHeader: newHeader(msg),
 		content:       content,
@@ -116,13 +116,13 @@ func NewGuildMessageCreate(c *gateway.MessageCreateEvent, s *state.Instance) Mes
 	message.Nonce = s.Nonces.Load(c.Nonce)
 
 	// This should not error.
-	g, err := s.Store.Guild(c.GuildID)
+	g, err := s.Cabinet.Guild(c.GuildID)
 	if err != nil {
 		return NewMessage(message, s, NewUser(c.Author, s))
 	}
 
 	if c.Member == nil {
-		c.Member, _ = s.Store.Member(c.GuildID, c.Author.ID)
+		c.Member, _ = s.Cabinet.Member(c.GuildID, c.Author.ID)
 	}
 	if c.Member == nil {
 		s.MemberState.RequestMember(c.GuildID, c.Author.ID)
@@ -142,7 +142,7 @@ func NewBacklogMessage(m discord.Message, s *state.Instance, g discord.Guild) Me
 		return NewMessage(m, s, NewUser(m.Author, s))
 	}
 
-	mem, err := s.Store.Member(m.GuildID, m.Author.ID)
+	mem, err := s.Cabinet.Member(m.GuildID, m.Author.ID)
 	if err != nil {
 		s.MemberState.RequestMember(m.GuildID, m.Author.ID)
 		return NewMessage(m, s, NewUser(m.Author, s))
@@ -157,7 +157,7 @@ func NewDirectMessage(m discord.Message, s *state.Instance) Message {
 
 func NewMessage(m discord.Message, s *state.Instance, author Author) Message {
 	// Render the message content.
-	var content = segments.ParseMessage(&m, s.Store)
+	var content = segments.ParseMessage(&m, s.Cabinet)
 
 	// Request members in mentions if we're in a guild.
 	if m.GuildID.IsValid() {

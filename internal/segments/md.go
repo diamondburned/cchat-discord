@@ -1,12 +1,12 @@
 package segments
 
 import (
-	"github.com/diamondburned/arikawa/discord"
-	"github.com/diamondburned/arikawa/state"
+	"github.com/diamondburned/arikawa/v2/discord"
+	"github.com/diamondburned/arikawa/v2/state/store"
 	"github.com/diamondburned/cchat-discord/internal/segments/embed"
 	"github.com/diamondburned/cchat-discord/internal/segments/renderer"
 	"github.com/diamondburned/cchat/text"
-	"github.com/diamondburned/ningen/md"
+	"github.com/diamondburned/ningen/v2/md"
 
 	_ "github.com/diamondburned/cchat-discord/internal/segments/blockquote"
 	_ "github.com/diamondburned/cchat-discord/internal/segments/codeblock"
@@ -17,7 +17,7 @@ import (
 	_ "github.com/diamondburned/cchat-discord/internal/segments/mention"
 )
 
-func ParseMessage(m *discord.Message, s state.Store) text.Rich {
+func ParseMessage(m *discord.Message, s store.Cabinet) text.Rich {
 	var content = []byte(m.Content)
 	var node = md.ParseWithMessage(content, s, m, true)
 
@@ -36,7 +36,7 @@ func ParseMessage(m *discord.Message, s state.Store) text.Rich {
 	}
 }
 
-func ParseWithMessage(b []byte, m *discord.Message, s state.Store, msg bool) text.Rich {
+func ParseWithMessage(b []byte, m *discord.Message, s store.Cabinet, msg bool) text.Rich {
 	node := md.ParseWithMessage(b, s, m, msg)
 	return renderer.RenderNode(b, node)
 }

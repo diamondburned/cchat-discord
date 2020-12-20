@@ -3,11 +3,11 @@ package emoji
 import (
 	"net/url"
 
-	"github.com/diamondburned/arikawa/discord"
+	"github.com/diamondburned/arikawa/v2/discord"
 	"github.com/diamondburned/cchat-discord/internal/segments/renderer"
 	"github.com/diamondburned/cchat/text"
 	"github.com/diamondburned/cchat/utils/empty"
-	"github.com/diamondburned/ningen/md"
+	"github.com/diamondburned/ningen/v2/md"
 	"github.com/yuin/goldmark/ast"
 )
 

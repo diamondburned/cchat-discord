@@ -1,7 +1,7 @@
 package authenticate
 
 import (
-	"github.com/diamondburned/arikawa/api"
+	"github.com/diamondburned/arikawa/v2/api"
 	"github.com/diamondburned/cchat"
 	"github.com/diamondburned/cchat-discord/internal/discord/session"
 	"github.com/diamondburned/cchat-discord/internal/discord/state"

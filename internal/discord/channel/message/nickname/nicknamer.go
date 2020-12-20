@@ -2,74 +2,91 @@ package nickname
 
 import (
 	"context"
+	"fmt"
 
-	"github.com/diamondburned/arikawa/gateway"
+	"github.com/diamondburned/arikawa/v2/discord"
+	"github.com/diamondburned/arikawa/v2/gateway"
 	"github.com/diamondburned/cchat"
 	"github.com/diamondburned/cchat-discord/internal/discord/channel/shared"
+	"github.com/diamondburned/cchat-discord/internal/funcutil"
 	"github.com/diamondburned/cchat-discord/internal/segments/colored"
 	"github.com/diamondburned/cchat/text"
-	"github.com/pkg/errors"
 )
 
 type Nicknamer struct {
+	userID discord.UserID
 	shared.Channel
 }
 
 func New(ch shared.Channel) cchat.Nicknamer {
-	return Nicknamer{ch}
+	return NewMember(ch.State.UserID, ch)
+}
+
+func NewMember(userID discord.UserID, ch shared.Channel) cchat.Nicknamer {
+	return Nicknamer{userID, ch}
 }
 
 func (nn Nicknamer) Nickname(ctx context.Context, labeler cchat.LabelContainer) (func(), error) {
 	// We don't have a nickname if we're not in a guild.
 	if !nn.GuildID.IsValid() {
+		// Use the current user.
+		u, err := nn.State.Cabinet.Me()
+		if err == nil {
+			labeler.SetLabel(text.Plain(fmt.Sprintf("%s#%s", u.Username, u.Discriminator)))
+		}
+
 		return func() {}, nil
 	}
 
+	return funcutil.JoinCancels(
+		nn.State.AddHandler(func(chunks *gateway.GuildMembersChunkEvent) {
+			if chunks.GuildID != nn.GuildID {
+				return
+			}
+			for _, member := range chunks.Members {
+				if member.User.ID == nn.userID {
+					nn.setMember(labeler, member)
+					break
+				}
+			}
+		}),
+		nn.State.AddHandler(func(g *gateway.GuildMemberUpdateEvent) {
+			if g.GuildID == nn.GuildID && g.User.ID == nn.userID {
+				nn.setMember(labeler, discord.Member{
+					User:    g.User,
+					Nick:    g.Nick,
+					RoleIDs: g.RoleIDs,
+				})
+			}
+		}),
+	), nil
+}
+
+func (nn Nicknamer) tryNicknameLabel(ctx context.Context, labeler cchat.LabelContainer) {
 	state := nn.State.WithContext(ctx)
 
-	// MemberColor should fill up the state cache.
-	c, err := state.MemberColor(nn.GuildID, nn.State.UserID)
+	m, err := state.Cabinet.Member(nn.GuildID, nn.userID)
 	if err != nil {
-		return nil, errors.Wrap(err, "Failed to get self member color")
+		return
 	}
 
-	m, err := state.Member(nn.GuildID, nn.State.UserID)
-	if err != nil {
-		return nil, errors.Wrap(err, "Failed to get self member")
-	}
+	nn.setMember(labeler, *m)
+}
 
+func (nn Nicknamer) setMember(labeler cchat.LabelContainer, m discord.Member) {
 	var rich = text.Rich{Content: m.User.Username}
 	if m.Nick != "" {
 		rich.Content = m.Nick
 	}
-	if c > 0 {
-		rich.Segments = []text.Segment{
-			colored.New(len(rich.Content), c.Uint32()),
+
+	guild, err := nn.State.Cabinet.Guild(nn.GuildID)
+	if err == nil {
+		if color := discord.MemberColor(*guild, m); color > 0 {
+			rich.Segments = []text.Segment{
+				colored.New(len(rich.Content), color.Uint32()),
+			}
 		}
 	}
 
 	labeler.SetLabel(rich)
-
-	// Copy the user ID to use.
-	var selfID = m.User.ID
-
-	return nn.State.AddHandler(func(g *gateway.GuildMemberUpdateEvent) {
-		if g.GuildID != nn.GuildID || g.User.ID != selfID {
-			return
-		}
-
-		var rich = text.Rich{Content: m.User.Username}
-		if m.Nick != "" {
-			rich.Content = m.Nick
-		}
-
-		c, err := nn.State.MemberColor(g.GuildID, selfID)
-		if err == nil {
-			rich.Segments = []text.Segment{
-				colored.New(len(rich.Content), c.Uint32()),
-			}
-		}
-
-		labeler.SetLabel(rich)
-	}), nil
 }

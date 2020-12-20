@@ -4,7 +4,8 @@ import (
 	"sort"
 	"sync"
 
-	"github.com/diamondburned/arikawa/discord"
+	"github.com/diamondburned/arikawa/v2/discord"
+	"github.com/diamondburned/arikawa/v2/gateway"
 	"github.com/diamondburned/cchat"
 	"github.com/diamondburned/cchat-discord/internal/discord/channel"
 	"github.com/diamondburned/cchat-discord/internal/discord/private/hub"
@@ -37,8 +38,13 @@ func (cset *containerSet) Register(container cchat.ServersContainer) {
 // top of the servers container.
 type prependServer struct{ cchat.Server }
 
+var _ cchat.ServerUpdate = (*prependServer)(nil)
+
 // PreviousID returns the appropriate parameters to prepend this server.
-func (ps prependServer) PreviousID() (cchat.ID, bool) { return "", false }
+func (ps prependServer) PreviousID() (cchat.ID, bool) {
+	// Return the private container's ID so this server goes right after it.
+	return "!!!private-container!!!", false
+}
 
 func (cset *containerSet) AddChannel(s *state.Instance, ch *discord.Channel) {
 	c, err := channel.New(s, *ch)
@@ -90,9 +96,29 @@ func (priv Private) Name() text.Rich {
 
 func (priv Private) AsLister() cchat.Lister { return priv }
 
+type activeChannel struct {
+	*discord.Channel
+	*gateway.ReadState // used for sorting
+}
+
+func (active activeChannel) LastMessageID() discord.MessageID {
+	if active.ReadState == nil {
+		return active.Channel.LastMessageID
+	}
+	if active.ReadState.LastMessageID > active.Channel.LastMessageID {
+		return active.ReadState.LastMessageID
+	}
+	if active.Channel.LastMessageID.IsValid() {
+		return active.Channel.LastMessageID
+	}
+	// Whatever.
+	return discord.MessageID(active.Channel.ID)
+}
+
 func (priv Private) Servers(container cchat.ServersContainer) error {
 	activeIDs := priv.hub.ActiveChannelIDs()
-	channels := make([]*discord.Channel, 0, len(activeIDs))
+
+	channels := make([]activeChannel, 0, len(activeIDs))
 
 	for _, id := range activeIDs {
 		c, err := priv.state.Channel(id)
@@ -100,25 +126,28 @@ func (priv Private) Servers(container cchat.ServersContainer) error {
 			return errors.Wrap(err, "failed to get private channel")
 		}
 
-		channels = append(channels, c)
+		channels = append(channels, activeChannel{
+			Channel:   c,
+			ReadState: priv.state.ReadState.FindLast(id),
+		})
 	}
 
 	// Sort so that channels with the largest last message ID (and therefore the
 	// latest message) will be on top.
 	sort.Slice(channels, func(i, j int) bool {
-		return channels[i].LastMessageID > channels[j].LastMessageID
+		return channels[i].LastMessageID() > channels[j].LastMessageID()
 	})
 
 	servers := make([]cchat.Server, len(channels)+1)
 	servers[0] = priv.hub
 
 	for i, ch := range channels {
-		c, err := channel.New(priv.state, *ch)
+		c, err := channel.New(priv.state, *ch.Channel)
 		if err != nil {
 			return errors.Wrap(err, "failed to create server for private channel")
 		}
 
-		servers[i] = c
+		servers[i+1] = c
 	}
 
 	container.SetServers(servers)

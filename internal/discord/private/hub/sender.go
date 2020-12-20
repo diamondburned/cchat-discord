@@ -4,7 +4,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/diamondburned/arikawa/discord"
+	"github.com/diamondburned/arikawa/v2/discord"
 	"github.com/diamondburned/cchat"
 	"github.com/diamondburned/cchat-discord/internal/discord/channel/message/send"
 	"github.com/diamondburned/cchat-discord/internal/discord/channel/message/send/complete"
@@ -61,8 +61,6 @@ func (s *Sender) Send(sendable cchat.SendableMessage) error {
 		return errors.New("message must start with a user or channel mention")
 	}
 
-	// TODO: account for channel names
-
 	targetID, err := discord.ParseSnowflake(matches[2])
 	if err != nil {
 		return errors.Wrap(err, "failed to parse recipient ID")
@@ -79,8 +77,17 @@ func (s *Sender) Send(sendable cchat.SendableMessage) error {
 		return errors.New("unknown channel")
 	}
 
-	s.adder.AddChannel(s.state, channel)
-	s.acList.add(channel.ID)
+	switch channel.Type {
+	case discord.DirectMessage, discord.GroupDM:
+		// valid
+	default:
+		return errors.New("not a [group] direct message channel")
+	}
+
+	// We should only add the channel if it's not already in the active list.
+	if s.acList.add(channel.ID) {
+		s.adder.AddChannel(s.state, channel)
+	}
 
 	sendData := send.WrapMessage(s.state, sendable)
 	sendData.Content = strings.TrimPrefix(content, matches[0])

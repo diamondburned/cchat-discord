@@ -14,16 +14,23 @@ type ChannelCompleter struct {
 	shared.Channel
 }
 
-type Completer map[byte]CompleterFunc
+type CompleterPrefixes map[byte]CompleterFunc
+
+type Completer struct {
+	Prefixes     CompleterPrefixes
+	SlashHandler cchat.Completer
+}
 
 const MaxCompletion = 15
 
 func New(ch shared.Channel) cchat.Completer {
 	completer := ChannelCompleter{ch}
 	return Completer{
-		'@': completer.CompleteMentions,
-		'#': completer.CompleteChannels,
-		':': completer.CompleteEmojis,
+		Prefixes: map[byte]CompleterFunc{
+			'@': completer.CompleteMentions,
+			'#': completer.CompleteChannels,
+			':': completer.CompleteEmojis,
+		},
 	}
 }
 
@@ -31,20 +38,24 @@ func New(ch shared.Channel) cchat.Completer {
 // This method supports user mentions, channel mentions and emojis.
 //
 // For the individual implementations, refer to channel_completion.go.
-func (ch Completer) Complete(words []string, i int64) []cchat.CompletionEntry {
+func (cc Completer) Complete(words []string, i int64) []cchat.CompletionEntry {
 	var word = words[i]
 	// Word should have at least a character for the char check.
-	if len(word) < 1 {
+	if len(word) == 0 {
 		return nil
 	}
 
-	fn, ok := ch[word[0]]
+	// Always check the first word for slash, not the current word.
+	if cc.SlashHandler != nil && words[0][0] == '/' {
+		return cc.SlashHandler.Complete(words, i)
+	}
+
+	fn, ok := cc.Prefixes[word[0]]
 	if !ok {
 		return nil
 	}
 
-	fn(word[1:])
-	return nil
+	return fn(word[1:])
 }
 
 // rankFunc is the default rank function to use.

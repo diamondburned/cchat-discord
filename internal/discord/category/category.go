@@ -3,7 +3,7 @@ package category
 import (
 	"sort"
 
-	"github.com/diamondburned/arikawa/discord"
+	"github.com/diamondburned/arikawa/v2/discord"
 	"github.com/diamondburned/cchat"
 	"github.com/diamondburned/cchat-discord/internal/discord/channel"
 	"github.com/diamondburned/cchat-discord/internal/discord/state"

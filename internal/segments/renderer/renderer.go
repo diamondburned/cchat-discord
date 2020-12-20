@@ -3,13 +3,12 @@ package renderer
 import (
 	"bytes"
 	"fmt"
-	"log"
 
-	"github.com/diamondburned/arikawa/discord"
-	"github.com/diamondburned/arikawa/state"
+	"github.com/diamondburned/arikawa/v2/discord"
+	"github.com/diamondburned/arikawa/v2/state/store"
 	"github.com/diamondburned/cchat-discord/internal/segments/segutil"
 	"github.com/diamondburned/cchat/text"
-	"github.com/diamondburned/ningen/md"
+	"github.com/diamondburned/ningen/v2/md"
 	"github.com/yuin/goldmark/ast"
 )
 
@@ -19,7 +18,6 @@ var renderers = map[ast.NodeKind]Renderer{}
 
 // Register registers a renderer to a node kind.
 func Register(kind ast.NodeKind, r Renderer) {
-	log.Printf("Registering kind %v", kind)
 	renderers[kind] = r
 }
 
@@ -50,7 +48,7 @@ type Text struct {
 
 	// these fields can be nil
 	Message *discord.Message
-	Store   state.Store
+	Store   store.Cabinet
 }
 
 func New(src []byte, node ast.Node) *Text {
@@ -64,7 +62,7 @@ func New(src []byte, node ast.Node) *Text {
 	}
 }
 
-func (r *Text) WithState(m *discord.Message, s state.Store) {
+func (r *Text) WithState(m *discord.Message, s store.Cabinet) {
 	r.Message = m
 	r.Store = s
 }

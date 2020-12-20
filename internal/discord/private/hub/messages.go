@@ -4,8 +4,8 @@ import (
 	"context"
 	"sync"
 
-	"github.com/diamondburned/arikawa/discord"
-	"github.com/diamondburned/arikawa/gateway"
+	"github.com/diamondburned/arikawa/v2/discord"
+	"github.com/diamondburned/arikawa/v2/gateway"
 	"github.com/diamondburned/cchat"
 	"github.com/diamondburned/cchat-discord/internal/discord/channel/message/send/complete"
 	"github.com/diamondburned/cchat-discord/internal/discord/channel/shared"
@@ -83,13 +83,13 @@ func NewMessages(s *state.Instance, acList *activeList, adder ChannelAdder) *Mes
 		messages: make(messageList, 0, 100),
 	}
 
-	hubServer.sender.completers = complete.Completer{
+	hubServer.sender.completers.Prefixes = complete.CompleterPrefixes{
 		':': func(word string) []cchat.CompletionEntry {
 			return complete.Emojis(s, 0, word)
 		},
 		'@': func(word string) []cchat.CompletionEntry {
 			if word != "" {
-				return complete.Presences(s, word)
+				return complete.AllUsers(s, word)
 			}
 
 			hubServer.msgMutex.Lock()
@@ -175,7 +175,7 @@ func (msgs *Messages) JoinServer(ctx context.Context, ct cchat.MessagesContainer
 					case discord.DirectMessage:
 						author.AddUserReply(c.DMRecipients[0], msgs.state)
 					case discord.GroupDM:
-						author.AddReply(shared.PrivateName(*c))
+						author.AddReply(shared.ChannelName(*c))
 					}
 				}
 			}

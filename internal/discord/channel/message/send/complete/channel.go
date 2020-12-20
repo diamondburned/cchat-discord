@@ -1,7 +1,7 @@
 package complete
 
 import (
-	"github.com/diamondburned/arikawa/discord"
+	"github.com/diamondburned/arikawa/v2/discord"
 	"github.com/diamondburned/cchat"
 	"github.com/diamondburned/cchat-discord/internal/discord/channel/shared"
 	"github.com/diamondburned/cchat-discord/internal/discord/state"
@@ -19,7 +19,7 @@ func (ch ChannelCompleter) CompleteChannels(word string) []cchat.CompletionEntry
 		return nil
 	}
 
-	c, err := ch.State.Store.Channels(ch.GuildID)
+	c, err := ch.State.Cabinet.Channels(ch.GuildID)
 	if err != nil {
 		return nil
 	}
@@ -28,7 +28,7 @@ func (ch ChannelCompleter) CompleteChannels(word string) []cchat.CompletionEntry
 }
 
 func DMChannels(s *state.Instance, word string) []cchat.CompletionEntry {
-	channels, err := s.Store.PrivateChannels()
+	channels, err := s.Cabinet.PrivateChannels()
 	if err != nil {
 		return nil
 	}
@@ -40,7 +40,7 @@ func DMChannels(s *state.Instance, word string) []cchat.CompletionEntry {
 func rankChannel(word string, ch discord.Channel) int {
 	switch ch.Type {
 	case discord.GroupDM, discord.DirectMessage:
-		return rankFunc(word, ch.Name+" "+shared.PrivateName(ch))
+		return rankFunc(word, ch.Name+" "+shared.ChannelName(ch))
 	default:
 		return rankFunc(word, ch.Name)
 	}
@@ -60,7 +60,7 @@ func completeChannels(
 
 		var category string
 		if s != nil && channel.CategoryID.IsValid() {
-			if cat, _ := s.Store.Channel(channel.CategoryID); cat != nil {
+			if cat, _ := s.Cabinet.Channel(channel.CategoryID); cat != nil {
 				category = cat.Name
 			}
 		}
@@ -86,5 +86,4 @@ func completeChannels(
 
 	sortDistances(entries, distances)
 	return entries
-
 }

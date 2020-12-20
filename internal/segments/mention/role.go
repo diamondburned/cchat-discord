@@ -1,7 +1,7 @@
 package mention
 
 import (
-	"github.com/diamondburned/arikawa/discord"
+	"github.com/diamondburned/arikawa/v2/discord"
 	"github.com/diamondburned/cchat-discord/internal/segments/colored"
 	"github.com/diamondburned/cchat/text"
 )

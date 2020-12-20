@@ -3,8 +3,8 @@ package session
 import (
 	"context"
 
-	"github.com/diamondburned/arikawa/gateway"
-	"github.com/diamondburned/arikawa/session"
+	"github.com/diamondburned/arikawa/v2/gateway"
+	"github.com/diamondburned/arikawa/v2/session"
 	"github.com/diamondburned/cchat"
 	"github.com/diamondburned/cchat-discord/internal/discord/folder"
 	"github.com/diamondburned/cchat-discord/internal/discord/guild"
@@ -13,7 +13,7 @@ import (
 	"github.com/diamondburned/cchat-discord/internal/urlutils"
 	"github.com/diamondburned/cchat/text"
 	"github.com/diamondburned/cchat/utils/empty"
-	"github.com/diamondburned/ningen"
+	"github.com/diamondburned/ningen/v2"
 	"github.com/pkg/errors"
 )
 
@@ -42,7 +42,7 @@ func (s *Session) ID() cchat.ID {
 }
 
 func (s *Session) Name() text.Rich {
-	u, err := s.state.Store.Me()
+	u, err := s.state.Cabinet.Me()
 	if err != nil {
 		// This shouldn't happen, ever.
 		return text.Rich{Content: "<@" + s.state.UserID.String() + ">"}
@@ -64,7 +64,7 @@ func (s *Session) Icon(ctx context.Context, iconer cchat.IconContainer) (func(),
 
 	return s.state.AddHandler(func(*gateway.UserUpdateEvent) {
 		// Bypass the event and use the state cache.
-		if u, err := s.state.Store.Me(); err == nil {
+		if u, err := s.state.Cabinet.Me(); err == nil {
 			iconer.SetIcon(urlutils.AvatarURL(u.AvatarURL()))
 		}
 	}), nil
@@ -91,17 +91,16 @@ func (s *Session) Servers(container cchat.ServersContainer) error {
 }
 
 func (s *Session) servers(container cchat.ServersContainer) error {
-	// TODO: remove this once v2 is used, so we could swap it with a getter.
-	ready := s.state.Ready
+	ready := s.state.Ready()
 
 	switch {
 	// If the user has guild folders:
-	case len(ready.Settings.GuildFolders) > 0:
+	case len(ready.UserSettings.GuildFolders) > 0:
 		// TODO: account for missing guilds.
-		toplevels := make([]cchat.Server, 1, len(ready.Settings.GuildFolders)+1)
+		toplevels := make([]cchat.Server, 1, len(ready.UserSettings.GuildFolders)+1)
 		toplevels[0] = s.private
 
-		for _, guildFolder := range ready.Settings.GuildFolders {
+		for _, guildFolder := range ready.UserSettings.GuildFolders {
 			// TODO: correct.
 			switch {
 			case guildFolder.ID != 0:
@@ -122,11 +121,11 @@ func (s *Session) servers(container cchat.ServersContainer) error {
 
 	// If the user doesn't have guild folders but has sorted their guilds
 	// before:
-	case len(ready.Settings.GuildPositions) > 0:
-		guilds := make([]cchat.Server, 1, len(ready.Settings.GuildPositions)+1)
+	case len(ready.UserSettings.GuildPositions) > 0:
+		guilds := make([]cchat.Server, 1, len(ready.UserSettings.GuildPositions)+1)
 		guilds[0] = s.private
 
-		for _, id := range ready.Settings.GuildPositions {
+		for _, id := range ready.UserSettings.GuildPositions {
 			g, err := guild.NewFromID(s.state, id)
 			if err != nil {
 				continue

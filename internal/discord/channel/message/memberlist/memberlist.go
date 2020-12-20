@@ -3,10 +3,10 @@ package memberlist
 import (
 	"context"
 
-	"github.com/diamondburned/arikawa/gateway"
+	"github.com/diamondburned/arikawa/v2/gateway"
 	"github.com/diamondburned/cchat"
 	"github.com/diamondburned/cchat-discord/internal/discord/channel/shared"
-	"github.com/diamondburned/ningen/states/member"
+	"github.com/diamondburned/ningen/v2/states/member"
 )
 
 func seekPrevGroup(l *member.List, ix int) (item, group gateway.GuildMemberListOpItem) {

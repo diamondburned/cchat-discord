@@ -1,7 +1,7 @@
 package renderer
 
 import (
-	"github.com/diamondburned/ningen/md"
+	"github.com/diamondburned/ningen/v2/md"
 )
 
 // InlineState assists in keeping a stateful inline segment builder.

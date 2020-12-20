@@ -4,14 +4,14 @@ import (
 	"bytes"
 	"fmt"
 
-	"github.com/diamondburned/arikawa/discord"
+	"github.com/diamondburned/arikawa/v2/discord"
 	"github.com/diamondburned/cchat-discord/internal/segments/emoji"
 	"github.com/diamondburned/cchat-discord/internal/segments/inline"
 	"github.com/diamondburned/cchat-discord/internal/segments/segutil"
 	"github.com/diamondburned/cchat-discord/internal/urlutils"
 	"github.com/diamondburned/cchat/text"
 	"github.com/diamondburned/cchat/utils/empty"
-	"github.com/diamondburned/ningen"
+	"github.com/diamondburned/ningen/v2"
 )
 
 type LargeActivityImage struct {
@@ -128,7 +128,7 @@ func getPresence(
 		return &p.Activities[0]
 	}
 
-	return p.Game
+	return nil
 }
 
 func findRole(roles []discord.Role, id discord.RoleID) (discord.Role, bool) {

@@ -4,8 +4,8 @@ import (
 	"context"
 	"sort"
 
-	"github.com/diamondburned/arikawa/discord"
-	"github.com/diamondburned/arikawa/gateway"
+	"github.com/diamondburned/arikawa/v2/discord"
+	"github.com/diamondburned/arikawa/v2/gateway"
 	"github.com/diamondburned/cchat"
 	"github.com/diamondburned/cchat-discord/internal/discord/category"
 	"github.com/diamondburned/cchat-discord/internal/discord/channel"
@@ -43,7 +43,7 @@ func (g *Guild) self(ctx context.Context) (*discord.Guild, error) {
 }
 
 func (g *Guild) selfState() (*discord.Guild, error) {
-	return g.state.Store.Guild(g.id)
+	return g.state.Cabinet.Guild(g.id)
 }
 
 func (g *Guild) ID() cchat.ID {

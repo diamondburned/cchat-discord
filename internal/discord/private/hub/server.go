@@ -4,7 +4,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/diamondburned/arikawa/discord"
+	"github.com/diamondburned/arikawa/v2/discord"
 	"github.com/diamondburned/cchat"
 	"github.com/diamondburned/cchat-discord/internal/discord/state"
 	"github.com/diamondburned/cchat/text"
@@ -12,8 +12,8 @@ import (
 	"github.com/pkg/errors"
 )
 
-// automatically add all channels with active messages within the past 48 hours.
-const autoAddActive = 24 * time.Hour
+// automatically add all channels with active messages within the past 5 days.
+const autoAddActive = 5 * 24 * time.Hour
 
 // activeList contains a list of channel IDs that should be put into its own
 // channels.
@@ -32,12 +32,55 @@ func makeActiveList(s *state.Instance) (*activeList, error) {
 	now := time.Now()
 
 	for _, channel := range channels {
-		if channel.LastMessageID.Time().Add(autoAddActive).After(now) {
+		switch channel.Type {
+		case discord.DirectMessage, discord.GroupDM:
+			// valid
+		default:
+			continue
+		}
+
+		if channelIsActive(s, channel, now) {
 			ids[channel.ID] = struct{}{}
 		}
 	}
 
 	return &activeList{active: ids}, nil
+}
+
+func channelIsActive(s *state.Instance, ch discord.Channel, now time.Time) bool {
+	// Never show a muted channel, unless requested.
+	muted := s.MutedState.Channel(ch.ID)
+	if muted {
+		return false
+	}
+
+	read := s.ReadState.FindLast(ch.ID)
+
+	// recently created channel
+	if ch.ID.Time().Add(autoAddActive).After(now) {
+		return true
+	}
+
+	var lastMsg discord.MessageID
+	if read != nil && read.LastMessageID.IsValid() {
+		lastMsg = read.LastMessageID
+	}
+	if ch.LastMessageID > lastMsg {
+		// We have a valid message ID in the read state and it is smaller than
+		// the last message in the channel, so this channel is not read.
+		if lastMsg.IsValid() {
+			return true
+		}
+
+		lastMsg = ch.LastMessageID
+	}
+
+	// last message is recent
+	if lastMsg.IsValid() && lastMsg.Time().Add(autoAddActive).After(now) {
+		return true
+	}
+
+	return false
 }
 
 func (acList *activeList) list() []discord.ChannelID {

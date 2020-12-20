@@ -3,7 +3,7 @@ package indicate
 import (
 	"github.com/diamondburned/cchat"
 	"github.com/diamondburned/cchat-discord/internal/discord/channel/shared"
-	"github.com/diamondburned/ningen/states/read"
+	"github.com/diamondburned/ningen/v2/states/read"
 	"github.com/pkg/errors"
 )
 

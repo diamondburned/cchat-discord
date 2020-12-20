@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/diamondburned/arikawa/discord"
-	"github.com/diamondburned/arikawa/gateway"
+	"github.com/diamondburned/arikawa/v2/discord"
+	"github.com/diamondburned/arikawa/v2/gateway"
 	"github.com/diamondburned/cchat"
 	"github.com/diamondburned/cchat-discord/internal/discord/channel/shared"
 	"github.com/diamondburned/cchat-discord/internal/segments/colored"
@@ -36,12 +36,12 @@ func (l *Member) ID() cchat.ID {
 }
 
 func (l *Member) Name() text.Rich {
-	g, err := l.channel.State.Store.Guild(l.channel.GuildID)
+	g, err := l.channel.State.Cabinet.Guild(l.channel.GuildID)
 	if err != nil {
 		return text.Plain(l.origName)
 	}
 
-	m, err := l.channel.State.Store.Member(l.channel.GuildID, l.userID)
+	m, err := l.channel.State.Cabinet.Member(l.channel.GuildID, l.userID)
 	if err != nil {
 		return text.Plain(l.origName)
 	}
@@ -80,19 +80,19 @@ func (l *Member) Icon(ctx context.Context, c cchat.IconContainer) (func(), error
 }
 
 func (l *Member) Status() cchat.Status {
-	p, err := l.channel.State.Store.Presence(l.channel.GuildID, l.userID)
+	p, err := l.channel.State.Cabinet.Presence(l.channel.GuildID, l.userID)
 	if err != nil {
 		return cchat.StatusUnknown
 	}
 
 	switch p.Status {
-	case discord.OnlineStatus:
+	case gateway.OnlineStatus:
 		return cchat.StatusOnline
-	case discord.DoNotDisturbStatus:
+	case gateway.DoNotDisturbStatus:
 		return cchat.StatusBusy
-	case discord.IdleStatus:
+	case gateway.IdleStatus:
 		return cchat.StatusAway
-	case discord.OfflineStatus, discord.InvisibleStatus:
+	case gateway.OfflineStatus, gateway.InvisibleStatus:
 		return cchat.StatusOffline
 	default:
 		return cchat.StatusUnknown
@@ -100,13 +100,9 @@ func (l *Member) Status() cchat.Status {
 }
 
 func (l *Member) Secondary() text.Rich {
-	p, err := l.channel.State.Store.Presence(l.channel.GuildID, l.userID)
+	p, err := l.channel.State.Cabinet.Presence(l.channel.GuildID, l.userID)
 	if err != nil {
 		return text.Plain("")
-	}
-
-	if p.Game != nil {
-		return formatSmallActivity(*p.Game)
 	}
 
 	if len(p.Activities) > 0 {

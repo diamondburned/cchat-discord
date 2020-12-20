@@ -4,15 +4,15 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/diamondburned/arikawa/discord"
-	"github.com/diamondburned/arikawa/state"
+	"github.com/diamondburned/arikawa/v2/discord"
+	"github.com/diamondburned/arikawa/v2/state/store"
 	"github.com/diamondburned/cchat-discord/internal/segments/colored"
 	"github.com/diamondburned/cchat-discord/internal/segments/inline"
 	"github.com/diamondburned/cchat-discord/internal/segments/link"
 	"github.com/diamondburned/cchat-discord/internal/segments/renderer"
 	"github.com/diamondburned/cchat-discord/internal/urlutils"
 	"github.com/diamondburned/cchat/text"
-	"github.com/diamondburned/ningen/md"
+	"github.com/diamondburned/ningen/v2/md"
 	"github.com/dustin/go-humanize"
 )
 
@@ -24,7 +24,7 @@ func writeEmbedSep(r *renderer.Text, embedColor discord.Color) {
 	}
 }
 
-func RenderEmbeds(r *renderer.Text, embeds []discord.Embed, m *discord.Message, s state.Store) {
+func RenderEmbeds(r *renderer.Text, embeds []discord.Embed, m *discord.Message, s store.Cabinet) {
 	for _, embed := range embeds {
 		r.StartBlock()
 		writeEmbedSep(r, embed.Color)
@@ -38,7 +38,7 @@ func RenderEmbeds(r *renderer.Text, embeds []discord.Embed, m *discord.Message, 
 	}
 }
 
-func RenderEmbed(r *renderer.Text, embed discord.Embed, m *discord.Message, s state.Store) {
+func RenderEmbed(r *renderer.Text, embed discord.Embed, m *discord.Message, s store.Cabinet) {
 	if a := embed.Author; a != nil && a.Name != "" {
 		if a.ProxyIcon != "" {
 			r.Append(Author(r.Buffer.Len(), *a))

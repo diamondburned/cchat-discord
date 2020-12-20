@@ -5,13 +5,14 @@ import (
 	"context"
 	"log"
 
-	"github.com/diamondburned/arikawa/discord"
-	"github.com/diamondburned/arikawa/session"
-	"github.com/diamondburned/arikawa/state"
-	"github.com/diamondburned/arikawa/utils/httputil/httpdriver"
+	"github.com/diamondburned/arikawa/v2/discord"
+	"github.com/diamondburned/arikawa/v2/session"
+	"github.com/diamondburned/arikawa/v2/state"
+	"github.com/diamondburned/arikawa/v2/state/store/defaultstore"
+	"github.com/diamondburned/arikawa/v2/utils/httputil/httpdriver"
 	"github.com/diamondburned/cchat"
 	"github.com/diamondburned/cchat-discord/internal/discord/state/nonce"
-	"github.com/diamondburned/ningen"
+	"github.com/diamondburned/ningen/v2"
 	"github.com/pkg/errors"
 )
 
@@ -19,7 +20,8 @@ type Instance struct {
 	*ningen.State
 	Nonces *nonce.Map
 
-	// UserID is a constant user ID. It is guaranteed to be valid.
+	// UserID is a constant user ID of the current user. It is guaranteed to be
+	// valid.
 	UserID discord.UserID
 }
 
@@ -52,17 +54,13 @@ func Login(email, password, mfa string) (*Instance, error) {
 		return nil, err
 	}
 
-	state, _ := state.NewFromSession(session, state.NewDefaultStore(nil))
-	return New(state)
+	cabinet := defaultstore.New()
+	cabinet.MessageStore = defaultstore.NewMessage(50)
+
+	return New(state.NewFromSession(session, cabinet))
 }
 
 func New(s *state.State) (*Instance, error) {
-	// Prefetch user.
-	u, err := s.Me()
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to get current user")
-	}
-
 	n, err := ningen.FromState(s)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to create a state wrapper")
@@ -75,6 +73,12 @@ func New(s *state.State) (*Instance, error) {
 
 	if err := n.Open(); err != nil {
 		return nil, err
+	}
+
+	// Prefetch user.
+	u, err := s.Me()
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get current user")
 	}
 
 	return &Instance{

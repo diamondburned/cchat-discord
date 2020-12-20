@@ -1,11 +1,15 @@
 package channel
 
 import (
-	"github.com/diamondburned/arikawa/discord"
+	"context"
+
+	"github.com/diamondburned/arikawa/v2/discord"
+	"github.com/diamondburned/arikawa/v2/gateway"
 	"github.com/diamondburned/cchat"
 	"github.com/diamondburned/cchat-discord/internal/discord/channel/message"
 	"github.com/diamondburned/cchat-discord/internal/discord/channel/shared"
 	"github.com/diamondburned/cchat-discord/internal/discord/state"
+	"github.com/diamondburned/cchat-discord/internal/urlutils"
 	"github.com/diamondburned/cchat/text"
 	"github.com/diamondburned/cchat/utils/empty"
 	"github.com/pkg/errors"
@@ -29,9 +33,11 @@ func New(s *state.Instance, ch discord.Channel) (cchat.Server, error) {
 
 func NewChannel(s *state.Instance, ch discord.Channel) (Channel, error) {
 	// Ensure the state keeps the channel's permission.
-	_, err := s.Permissions(ch.ID, s.UserID)
-	if err != nil {
-		return Channel{}, errors.Wrap(err, "Failed to get permission")
+	if ch.GuildID.IsValid() {
+		_, err := s.Permissions(ch.ID, s.UserID)
+		if err != nil {
+			return Channel{}, errors.Wrap(err, "failed to get permission")
+		}
 	}
 
 	sharedCh := shared.Channel{
@@ -56,11 +62,7 @@ func (ch Channel) Name() text.Rich {
 		return text.Rich{Content: ch.ID()}
 	}
 
-	if c.NSFW {
-		return text.Rich{Content: "#" + c.Name + " (nsfw)"}
-	} else {
-		return text.Rich{Content: "#" + c.Name}
-	}
+	return text.Plain(shared.ChannelName(*c))
 }
 
 func (ch Channel) AsCommander() cchat.Commander {
@@ -73,4 +75,53 @@ func (ch Channel) AsMessenger() cchat.Messenger {
 	}
 
 	return message.New(ch.Channel)
+}
+
+func (ch Channel) AsIconer() cchat.Iconer {
+	// Guild channels never have an icon.
+	if ch.GuildID.IsValid() {
+		return nil
+	}
+
+	c, err := ch.Self()
+	if err != nil {
+		return nil
+	}
+
+	// Only DM channels should have an icon.
+	if c.Type != discord.DirectMessage {
+		return nil
+	}
+
+	return PresenceAvatar{
+		user:  c.DMRecipients[0],
+		guild: ch.GuildID,
+		state: ch.State,
+	}
+}
+
+type PresenceAvatar struct {
+	user  discord.User
+	guild discord.GuildID
+	state *state.Instance
+}
+
+func (avy PresenceAvatar) Icon(ctx context.Context, iconer cchat.IconContainer) (func(), error) {
+	if avy.user.Avatar != "" {
+		iconer.SetIcon(urlutils.AvatarURL(avy.user.AvatarURL()))
+	}
+
+	// There are so many other places that could be checked, but this is good
+	// enough.
+
+	c, err := avy.state.Presence(avy.guild, avy.user.ID)
+	if err == nil && c.User.Avatar != "" {
+		iconer.SetIcon(urlutils.AvatarURL(c.User.AvatarURL()))
+	}
+
+	return avy.state.AddHandler(func(update *gateway.PresenceUpdateEvent) {
+		if avy.user.ID == update.User.ID {
+			iconer.SetIcon(urlutils.AvatarURL(update.User.AvatarURL()))
+		}
+	}), nil
 }

@@ -4,7 +4,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/diamondburned/arikawa/gateway"
+	"github.com/diamondburned/arikawa/v2/gateway"
 	"github.com/diamondburned/cchat"
 	"github.com/diamondburned/cchat-discord/internal/discord/guild"
 	"github.com/diamondburned/cchat-discord/internal/discord/state"
@@ -25,7 +25,7 @@ func New(s *state.Instance, gf gateway.GuildFolder) cchat.Server {
 		var names = make([]string, 0, len(gf.GuildIDs))
 
 		for _, id := range gf.GuildIDs {
-			g, err := s.Store.Guild(id)
+			g, err := s.Cabinet.Guild(id)
 			if err == nil {
 				names = append(names, g.Name)
 			}

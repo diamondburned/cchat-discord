@@ -1,7 +1,7 @@
 package edit
 
 import (
-	"github.com/diamondburned/arikawa/discord"
+	"github.com/diamondburned/arikawa/v2/discord"
 	"github.com/diamondburned/cchat"
 	"github.com/diamondburned/cchat-discord/internal/discord/channel/shared"
 	"github.com/pkg/errors"
@@ -23,7 +23,7 @@ func (ed Editor) IsEditable(id string) bool {
 		return false
 	}
 
-	m, err := ed.State.Store.Message(ed.ID, discord.MessageID(s))
+	m, err := ed.State.Cabinet.Message(ed.ID, discord.MessageID(s))
 	if err != nil {
 		return false
 	}
@@ -38,7 +38,7 @@ func (ed Editor) RawContent(id string) (string, error) {
 		return "", errors.Wrap(err, "Failed to parse ID")
 	}
 
-	m, err := ed.State.Store.Message(ed.ID, discord.MessageID(s))
+	m, err := ed.State.Cabinet.Message(ed.ID, discord.MessageID(s))
 	if err != nil {
 		return "", errors.Wrap(err, "Failed to get the message")
 	}

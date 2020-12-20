@@ -1,7 +1,7 @@
 package message
 
 import (
-	"github.com/diamondburned/arikawa/discord"
+	"github.com/diamondburned/arikawa/v2/discord"
 	"github.com/diamondburned/cchat"
 	"github.com/diamondburned/cchat-discord/internal/discord/state"
 	"github.com/diamondburned/cchat-discord/internal/segments/colored"
@@ -132,25 +132,31 @@ func (a *Author) AddReply(name string) {
 // 	richMember(&a.name, m, g, s)
 // }
 
+func (a *Author) addAuthorReference(msgref discord.Message, s *state.Instance) {
+	a.name.Content += authorReplyingTo
+	start, end := richUser(&a.name, msgref.Author, s)
+
+	a.name.Segments = append(a.name.Segments,
+		reference.NewMessageSegment(start, end, msgref.ID),
+	)
+}
+
 // AddMessageReference adds a message reference to the author.
 func (a *Author) AddMessageReference(msgref discord.Message, s *state.Instance) {
 	if !msgref.GuildID.IsValid() {
-		a.name.Content += authorReplyingTo
-		start, end := richUser(&a.name, msgref.Author, s)
-
-		a.name.Segments = append(a.name.Segments,
-			reference.NewMessageSegment(start, end, msgref.ID),
-		)
+		a.addAuthorReference(msgref, s)
 		return
 	}
 
-	g, err := s.Guild(msgref.GuildID)
+	g, err := s.Cabinet.Guild(msgref.GuildID)
 	if err != nil {
+		a.addAuthorReference(msgref, s)
 		return
 	}
 
-	m, err := s.Member(g.ID, msgref.Author.ID)
+	m, err := s.Cabinet.Member(g.ID, msgref.Author.ID)
 	if err != nil {
+		a.addAuthorReference(msgref, s)
 		return
 	}
 

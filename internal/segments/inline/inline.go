@@ -4,7 +4,7 @@ import (
 	"github.com/diamondburned/cchat-discord/internal/segments/renderer"
 	"github.com/diamondburned/cchat/text"
 	"github.com/diamondburned/cchat/utils/empty"
-	"github.com/diamondburned/ningen/md"
+	"github.com/diamondburned/ningen/v2/md"
 	"github.com/yuin/goldmark/ast"
 )
 
@@ -46,6 +46,20 @@ var _ text.Attributor = (*Attribute)(nil)
 
 func (attr Attribute) Attribute() text.Attribute {
 	return text.Attribute(attr)
+}
+
+// DimSuffix creates a string with the suffix dimmed.
+func DimSuffix(prefix, suffix string) text.Rich {
+	return text.Rich{
+		Content: prefix + suffix,
+		Segments: []text.Segment{
+			Segment{
+				start:      len(prefix),
+				end:        len(prefix) + len(suffix),
+				attributes: Attribute(text.AttributeDimmed),
+			},
+		},
+	}
 }
 
 type Segment struct {

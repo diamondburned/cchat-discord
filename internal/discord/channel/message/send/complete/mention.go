@@ -1,9 +1,8 @@
 package complete
 
 import (
-	"strings"
-
-	"github.com/diamondburned/arikawa/discord"
+	"github.com/diamondburned/arikawa/v2/discord"
+	"github.com/diamondburned/arikawa/v2/gateway"
 	"github.com/diamondburned/cchat"
 	"github.com/diamondburned/cchat-discord/internal/discord/message"
 	"github.com/diamondburned/cchat-discord/internal/discord/state"
@@ -29,8 +28,8 @@ func GuildMessageMentions(
 	// Keep track of the number of authors.
 	// TODO: fix excess allocations
 
-	var entries []cchat.CompletionEntry
-	var authors map[discord.UserID]struct{}
+	var entries = make([]cchat.CompletionEntry, 0, MaxCompletion)
+	var authors = make(map[discord.UserID]struct{}, MaxCompletion)
 
 	for _, msg := range msgs {
 		// If we've already added the author into the list, then skip.
@@ -38,13 +37,12 @@ func GuildMessageMentions(
 			continue
 		}
 
-		ensureAuthorMapMade(&authors)
 		authors[msg.Author.ID] = struct{}{}
 
 		var rich text.Rich
 
 		if guild != nil && state != nil {
-			m, err := state.Store.Member(guild.ID, msg.Author.ID)
+			m, err := state.Cabinet.Member(guild.ID, msg.Author.ID)
 			if err == nil {
 				rich = message.RenderMemberName(*m, *guild, state)
 			}
@@ -54,8 +52,6 @@ func GuildMessageMentions(
 		if rich.IsEmpty() {
 			rich = text.Plain(msg.Author.Username)
 		}
-
-		ensureEntriesMade(&entries)
 
 		entries = append(entries, cchat.CompletionEntry{
 			Raw:       msg.Author.Mention(),
@@ -72,72 +68,131 @@ func GuildMessageMentions(
 	return entries
 }
 
-func ensureAuthorMapMade(authors *map[discord.UserID]struct{}) {
-	if *authors == nil {
-		*authors = make(map[discord.UserID]struct{}, MaxCompletion)
-	}
-}
+// AllUsers checks for friends and presences.
+func AllUsers(s *state.Instance, word string) []cchat.CompletionEntry {
+	var full bool
 
-func Presences(s *state.Instance, word string) []cchat.CompletionEntry {
-	presences, err := s.Presences(0)
-	if err != nil {
-		return nil
-	}
-
+	var friends map[discord.UserID]struct{}
 	var entries []cchat.CompletionEntry
 	var distances map[string]int
 
-	for _, presence := range presences {
-		rank := rankFunc(word, presence.User.Username)
+	// Search for friends first.
+	s.RelationshipState.Each(func(r *discord.Relationship) bool {
+		// Skip blocked users or strangers.
+		if r.Type == 0 || r.Type == discord.BlockedRelationship {
+			return false
+		}
+
+		rank := rankFunc(word, r.User.Username)
 		if rank == -1 {
-			continue
+			return false
+		}
+
+		if friends == nil {
+			friends = map[discord.UserID]struct{}{}
+		}
+
+		friends[r.UserID] = struct{}{}
+
+		ensureEntriesMade(&entries)
+		ensureDistancesMade(&distances)
+
+		raw := r.User.Mention()
+
+		var status = gateway.UnknownStatus
+		if p, _ := s.PresenceState.Presence(0, r.UserID); p != nil {
+			status = p.Status
+		}
+
+		entries = append(entries, cchat.CompletionEntry{
+			Raw:       raw,
+			Text:      text.Plain(r.User.Username + "#" + r.User.Discriminator),
+			Secondary: text.Plain(FormatStatus(status) + " - " + FormatRelationshipType(r.Type)),
+			IconURL:   r.User.AvatarURL(),
+		})
+
+		distances[raw] = rank
+
+		full = len(entries) >= MaxCompletion
+		return full
+	})
+
+	if full {
+		goto Full
+	}
+
+	// Search for presences.
+	s.PresenceState.Each(0, func(p *gateway.Presence) bool {
+		// Avoid duplicates.
+		if _, ok := friends[p.User.ID]; ok {
+			return false
+		}
+
+		rank := rankFunc(word, p.User.Username)
+		if rank == -1 {
+			return false
 		}
 
 		ensureEntriesMade(&entries)
 		ensureDistancesMade(&distances)
 
-		raw := presence.User.Mention()
+		raw := p.User.Mention()
 
 		entries = append(entries, cchat.CompletionEntry{
 			Raw:       raw,
-			Text:      text.Plain(presence.User.Username + "#" + presence.User.Discriminator),
-			Secondary: text.Plain(FormatStatus(presence.Status)),
-			IconURL:   presence.User.AvatarURL(),
+			Text:      text.Plain(p.User.Username + "#" + p.User.Discriminator),
+			Secondary: text.Plain(FormatStatus(p.Status)),
+			IconURL:   p.User.AvatarURL(),
 		})
 
 		distances[raw] = rank
 
-		if len(entries) >= MaxCompletion {
-			break
-		}
-	}
+		full = len(entries) >= MaxCompletion
+		return full
+	})
 
+Full:
 	sortDistances(entries, distances)
 	return entries
 }
 
-func FormatStatus(status discord.Status) string {
+func FormatStatus(status gateway.Status) string {
 	switch status {
-	case discord.OnlineStatus:
+	case gateway.OnlineStatus:
 		return "Online"
-	case discord.DoNotDisturbStatus:
+	case gateway.DoNotDisturbStatus:
 		return "Busy"
-	case discord.IdleStatus:
+	case gateway.IdleStatus:
 		return "Idle"
-	case discord.InvisibleStatus:
+	case gateway.InvisibleStatus:
 		return "Invisible"
-	case discord.OfflineStatus:
-		return "Offline"
+	case gateway.OfflineStatus:
+		fallthrough
 	default:
-		return strings.Title(string(status))
+		return "Offline"
+	}
+}
+
+func FormatRelationshipType(relaType discord.RelationshipType) string {
+	switch relaType {
+	case discord.BlockedRelationship:
+		return "Blocked"
+	case discord.FriendRelationship:
+		return "Friend"
+	case discord.IncomingFriendRequest:
+		return "Incoming friend request"
+	case discord.SentFriendRequest:
+		return "Friend request sent"
+	default:
+		return ""
 	}
 }
 
 func (ch ChannelCompleter) CompleteMentions(word string) []cchat.CompletionEntry {
 	// If there is no input, then we should grab the latest messages.
 	if word == "" {
-		msgs, _ := ch.State.Store.Messages(ch.ID)
-		g, _ := ch.State.Store.Guild(ch.GuildID) // nil is fine
+		msgs, _ := ch.State.Cabinet.Messages(ch.ID)
+		g, _ := ch.State.Cabinet.Guild(ch.GuildID) // nil is fine
 
 		return GuildMessageMentions(msgs, ch.State, g)
 	}
@@ -147,7 +202,7 @@ func (ch ChannelCompleter) CompleteMentions(word string) []cchat.CompletionEntry
 
 	// If we're not in a guild, then we can check the list of recipients.
 	if !ch.GuildID.IsValid() {
-		c, err := ch.State.Store.Channel(ch.ID)
+		c, err := ch.State.Cabinet.Channel(ch.ID)
 		if err != nil {
 			return nil
 		}
@@ -182,8 +237,8 @@ func (ch ChannelCompleter) CompleteMentions(word string) []cchat.CompletionEntry
 	}
 
 	// If we're in a guild, then we should search for (all) members.
-	m, merr := ch.State.Store.Members(ch.GuildID)
-	g, gerr := ch.State.Store.Guild(ch.GuildID)
+	m, merr := ch.State.Cabinet.Members(ch.GuildID)
+	g, gerr := ch.State.Cabinet.Guild(ch.GuildID)
 
 	if merr != nil || gerr != nil {
 		return nil

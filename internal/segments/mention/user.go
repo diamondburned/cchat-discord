@@ -4,14 +4,14 @@ import (
 	"bytes"
 	"strings"
 
-	"github.com/diamondburned/arikawa/discord"
-	"github.com/diamondburned/arikawa/state"
+	"github.com/diamondburned/arikawa/v2/discord"
+	"github.com/diamondburned/arikawa/v2/state/store"
 	"github.com/diamondburned/cchat-discord/internal/segments/colored"
 	"github.com/diamondburned/cchat-discord/internal/segments/inline"
 	"github.com/diamondburned/cchat-discord/internal/segments/segutil"
 	"github.com/diamondburned/cchat/text"
 	"github.com/diamondburned/cchat/utils/empty"
-	"github.com/diamondburned/ningen"
+	"github.com/diamondburned/ningen/v2"
 )
 
 // NameSegment represents a clickable member name; it does not implement colors.
@@ -29,6 +29,7 @@ func UserSegment(start, end int, u discord.User) NameSegment {
 		start: start,
 		end:   end,
 		um: User{
+			store:  store.NoopCabinet,
 			Member: discord.Member{User: u},
 		},
 	}
@@ -39,6 +40,7 @@ func MemberSegment(start, end int, guild discord.Guild, m discord.Member) NameSe
 		start: start,
 		end:   end,
 		um: User{
+			store:  store.NoopCabinet,
 			Guild:  guild,
 			Member: m,
 		},
@@ -48,7 +50,7 @@ func MemberSegment(start, end int, guild discord.Guild, m discord.Member) NameSe
 // WithState assigns a ningen state into the given name segment. This allows the
 // popovers to have additional information such as user notes.
 func (m *NameSegment) WithState(state *ningen.State) {
-	m.um.state = state
+	m.um.WithState(state)
 }
 
 func (m NameSegment) Bounds() (start, end int) {
@@ -67,7 +69,9 @@ func (m NameSegment) AsColorer() text.Colorer {
 }
 
 type User struct {
-	state  state.Store
+	ningen *ningen.State
+	store  store.Cabinet
+
 	Guild  discord.Guild
 	Member discord.Member
 }
@@ -80,9 +84,9 @@ var (
 
 // NewUser creates a new user mention. If state is of type *ningen.State, then
 // it'll fetch additional information asynchronously.
-func NewUser(state state.Store, guild discord.GuildID, guser discord.GuildUser) *User {
+func NewUser(store store.Cabinet, guild discord.GuildID, guser discord.GuildUser) *User {
 	if guser.Member == nil {
-		m, err := state.Member(guild, guser.ID)
+		m, err := store.Member(guild, guser.ID)
 		if err != nil {
 			guser.Member = &discord.Member{}
 		} else {
@@ -93,16 +97,20 @@ func NewUser(state state.Store, guild discord.GuildID, guser discord.GuildUser) 
 	guser.Member.User = guser.User
 
 	// Get the guild for the role slice. If not, then too bad.
-	g, err := state.Guild(guild)
+	g, err := store.Guild(guild)
 	if err != nil {
 		g = &discord.Guild{}
 	}
 
 	return &User{
-		state:  state,
+		store:  store,
 		Guild:  *g,
 		Member: *guser.Member,
 	}
+}
+
+func (um *User) WithState(state *ningen.State) {
+	um.ningen = state
 }
 
 // HasColor returns true if the current user has a color.
@@ -112,7 +120,7 @@ func (um User) HasColor() bool {
 		return false
 	}
 
-	g, err := um.state.Guild(um.Guild.ID)
+	g, err := um.store.Guild(um.Guild.ID)
 	if err != nil {
 		return false
 	}
@@ -121,7 +129,7 @@ func (um User) HasColor() bool {
 }
 
 func (um User) Color() uint32 {
-	g, err := um.state.Guild(um.Guild.ID)
+	g, err := um.store.Guild(um.Guild.ID)
 	if err != nil {
 		return colored.Blurple
 	}
@@ -190,9 +198,9 @@ func (um User) MentionInfo() text.Rich {
 
 	// These information can only be obtained from the state. As such, we check
 	// if the state is given.
-	if ningenState, ok := um.state.(*ningen.State); ok {
+	if um.ningen != nil {
 		// Does the user have rich presence? If so, write.
-		if p, err := um.state.Presence(um.Guild.ID, um.Member.User.ID); err == nil {
+		if p, err := um.store.Presence(um.Guild.ID, um.Member.User.ID); err == nil {
 			for _, ac := range p.Activities {
 				formatActivity(&segment, &content, ac)
 				content.WriteString("\n\n")
@@ -200,11 +208,11 @@ func (um User) MentionInfo() text.Rich {
 		} else if um.Guild.ID.IsValid() {
 			// If we're still in a guild, then we can ask Discord for that
 			// member with their presence attached.
-			ningenState.MemberState.RequestMember(um.Guild.ID, um.Member.User.ID)
+			um.ningen.MemberState.RequestMember(um.Guild.ID, um.Member.User.ID)
 		}
 
 		// Write the user's note if any.
-		if note := ningenState.NoteState.Note(um.Member.User.ID); note != "" {
+		if note := um.ningen.NoteState.Note(um.Member.User.ID); note != "" {
 			formatSectionf(&segment, &content, "Note")
 			content.WriteRune('\n')
 

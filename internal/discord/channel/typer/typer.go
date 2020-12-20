@@ -4,8 +4,8 @@ import (
 	"errors"
 	"time"
 
-	"github.com/diamondburned/arikawa/discord"
-	"github.com/diamondburned/arikawa/gateway"
+	"github.com/diamondburned/arikawa/v2/discord"
+	"github.com/diamondburned/arikawa/v2/gateway"
 	"github.com/diamondburned/cchat"
 	"github.com/diamondburned/cchat-discord/internal/discord/message"
 	"github.com/diamondburned/cchat-discord/internal/discord/state"
@@ -27,13 +27,13 @@ func NewFromAuthor(author message.Author, ev *gateway.TypingStartEvent) Typer {
 
 func New(s *state.Instance, ev *gateway.TypingStartEvent) (*Typer, error) {
 	if ev.GuildID.IsValid() {
-		g, err := s.Store.Guild(ev.GuildID)
+		g, err := s.Cabinet.Guild(ev.GuildID)
 		if err != nil {
 			return nil, err
 		}
 
 		if ev.Member == nil {
-			ev.Member, err = s.Store.Member(ev.GuildID, ev.UserID)
+			ev.Member, err = s.Cabinet.Member(ev.GuildID, ev.UserID)
 			if err != nil {
 				return nil, err
 			}
@@ -45,7 +45,7 @@ func New(s *state.Instance, ev *gateway.TypingStartEvent) (*Typer, error) {
 		}, nil
 	}
 
-	c, err := s.Store.Channel(ev.ChannelID)
+	c, err := s.Cabinet.Channel(ev.ChannelID)
 	if err != nil {
 		return nil, err
 	}

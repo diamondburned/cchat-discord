@@ -1,8 +1,9 @@
 package send
 
 import (
-	"github.com/diamondburned/arikawa/api"
-	"github.com/diamondburned/arikawa/discord"
+	"github.com/diamondburned/arikawa/v2/api"
+	"github.com/diamondburned/arikawa/v2/discord"
+	"github.com/diamondburned/arikawa/v2/utils/sendpart"
 	"github.com/diamondburned/cchat"
 	"github.com/diamondburned/cchat-discord/internal/discord/channel/message/send/complete"
 	"github.com/diamondburned/cchat-discord/internal/discord/channel/shared"
@@ -50,10 +51,10 @@ func (s Sender) AsCompleter() cchat.Completer {
 	return complete.New(s.Channel)
 }
 
-func addAttachments(atts []cchat.MessageAttachment) []api.SendMessageFile {
-	var files = make([]api.SendMessageFile, len(atts))
+func addAttachments(atts []cchat.MessageAttachment) []sendpart.File {
+	var files = make([]sendpart.File, len(atts))
 	for i, a := range atts {
-		files[i] = api.SendMessageFile{
+		files[i] = sendpart.File{
 			Name:   a.Name,
 			Reader: a,
 		}

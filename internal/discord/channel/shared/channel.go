@@ -5,18 +5,32 @@ import (
 	"errors"
 	"strings"
 
-	"github.com/diamondburned/arikawa/discord"
+	"github.com/diamondburned/arikawa/v2/discord"
 	"github.com/diamondburned/cchat-discord/internal/discord/state"
 )
 
-// PrivateName returns the channel name if any, otherwise it formats its own
+// ChannelName returns the channel name if any, otherwise it formats its own
 // name into a list of recipients.
-func PrivateName(privCh discord.Channel) string {
-	if privCh.Name != "" {
-		return privCh.Name
+func ChannelName(ch discord.Channel) string {
+	switch ch.Type {
+	case discord.DirectMessage, discord.GroupDM:
+		if len(ch.DMRecipients) > 0 {
+			return FormatRecipients(ch.DMRecipients)
+		}
+
+	default:
+		if ch.Name == "" {
+			break
+		}
+
+		if ch.NSFW {
+			return "#" + ch.Name + " (nsfw)"
+		} else {
+			return "#" + ch.Name
+		}
 	}
 
-	return FormatRecipients(privCh.DMRecipients)
+	return ch.ID.String()
 }
 
 // FormatRecipients joins the given list of users into a string listing all
@@ -24,14 +38,14 @@ func PrivateName(privCh discord.Channel) string {
 func FormatRecipients(users []discord.User) string {
 	switch len(users) {
 	case 0:
-		return "<Nobody>"
+		return ""
 	case 1:
 		return users[0].Username
 	case 2:
 		return users[0].Username + " and " + users[1].Username
 	}
 
-	var usernames = make([]string, len(users))
+	var usernames = make([]string, len(users)-1)
 	for i, user := range users[:len(users)-1] {
 		usernames[i] = user.Username
 	}
@@ -48,6 +62,11 @@ type Channel struct {
 // HasPermission returns true if the current user has the given permissions in
 // the channel.
 func (ch Channel) HasPermission(perms ...discord.Permissions) bool {
+	// Assume we have permissions in a direct message channel.
+	if !ch.GuildID.IsValid() {
+		return true
+	}
+
 	p, err := ch.State.StateOnly().Permissions(ch.ID, ch.State.UserID)
 	if err != nil {
 		return false
@@ -63,16 +82,16 @@ func (ch Channel) HasPermission(perms ...discord.Permissions) bool {
 }
 
 func (ch Channel) Messages() ([]discord.Message, error) {
-	return ch.State.Store.Messages(ch.ID)
+	return ch.State.Cabinet.Messages(ch.ID)
 }
 
 func (ch Channel) Guild() (*discord.Guild, error) {
 	if !ch.GuildID.IsValid() {
 		return nil, errors.New("channel not in guild")
 	}
-	return ch.State.Store.Guild(ch.GuildID)
+	return ch.State.Cabinet.Guild(ch.GuildID)
 }
 
 func (ch Channel) Self() (*discord.Channel, error) {
-	return ch.State.Store.Channel(ch.ID)
+	return ch.State.Cabinet.Channel(ch.ID)
 }

@@ -1,7 +1,7 @@
 package action
 
 import (
-	"github.com/diamondburned/arikawa/discord"
+	"github.com/diamondburned/arikawa/v2/discord"
 	"github.com/diamondburned/cchat"
 	"github.com/diamondburned/cchat-discord/internal/discord/channel/shared"
 	"github.com/pkg/errors"
@@ -43,13 +43,13 @@ func (ac Actioner) Actions(id string) []string {
 		return nil
 	}
 
-	m, err := ac.State.Store.Message(ac.ID, discord.MessageID(s))
+	m, err := ac.State.Cabinet.Message(ac.ID, discord.MessageID(s))
 	if err != nil {
 		return nil
 	}
 
 	// Get the current user.
-	u, err := ac.State.Store.Me()
+	u, err := ac.State.Cabinet.Me()
 	if err != nil {
 		return nil
 	}
@@ -91,7 +91,7 @@ func (ac Actioner) canManageMessages(userID discord.UserID) bool {
 		return false
 	}
 
-	m, err := ac.State.Store.Member(ac.GuildID, userID)
+	m, err := ac.State.Cabinet.Member(ac.GuildID, userID)
 	if err != nil {
 		return false
 	}
