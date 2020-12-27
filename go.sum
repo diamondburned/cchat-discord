@@ -61,6 +61,8 @@ github.com/diamondburned/arikawa/v2 v2.0.0-20201220000828-3e2814748f9a h1:aA8K3+
 github.com/diamondburned/arikawa/v2 v2.0.0-20201220000828-3e2814748f9a/go.mod h1:e+lhS20ni2luFEU06Pc8paCxgZL99/RZb77dOC82CF0=
 github.com/diamondburned/arikawa/v2 v2.0.0-20201220032235-088b30430377 h1:71BLnECSl0/Ns7iZmEm7MpE5+qSuWw/BQBQY2XCUmVc=
 github.com/diamondburned/arikawa/v2 v2.0.0-20201220032235-088b30430377/go.mod h1:e+lhS20ni2luFEU06Pc8paCxgZL99/RZb77dOC82CF0=
+github.com/diamondburned/arikawa/v2 v2.0.0-20201227001310-f3f075b27f44 h1:i6Jec7bvVY8NhwW3L0SlpfWM6r2p2i67XuhiOEzkfwI=
+github.com/diamondburned/arikawa/v2 v2.0.0-20201227001310-f3f075b27f44/go.mod h1:e+lhS20ni2luFEU06Pc8paCxgZL99/RZb77dOC82CF0=
 github.com/diamondburned/cchat v0.0.34 h1:BGiVxMRA9dmW3rLilIldBvjVan7eTTpaWCCfX9IKBYU=
 github.com/diamondburned/cchat v0.0.34/go.mod h1:+zXktogE45A0om4fT6B/z6Ii7FXNafjxsNspI0rlhbU=
 github.com/diamondburned/cchat v0.0.35 h1:WiMGl8BQJgbP9E4xRxgLGlqUsHpTcJgDKDt8/6a7lBk=
@@ -197,6 +199,8 @@ github.com/diamondburned/ningen/v2 v2.0.0-20201220032656-1096439b9379 h1:gcmMWHB
 github.com/diamondburned/ningen/v2 v2.0.0-20201220032656-1096439b9379/go.mod h1:2ZjyeHqO9jCdlfmJhhVhk8eCumx418n39uVaC/LgEgY=
 github.com/diamondburned/ningen/v2 v2.0.0-20201220054153-c69c4f7057b4 h1:qzh5ghfgvUllilOhkrGP29IGQT6DGfcc3lhk9uSA6nU=
 github.com/diamondburned/ningen/v2 v2.0.0-20201220054153-c69c4f7057b4/go.mod h1:2ZjyeHqO9jCdlfmJhhVhk8eCumx418n39uVaC/LgEgY=
+github.com/diamondburned/ningen/v2 v2.0.0-20201227020621-a4e33db11d3c h1:IWn/N54JkJz7PVgmAt7cWXLky9wY0UjXzznNoWLIFgA=
+github.com/diamondburned/ningen/v2 v2.0.0-20201227020621-a4e33db11d3c/go.mod h1:zQkAo1RT4ru4HW6B5T4IRO2pee8ITzTUA2Y7XNpgjqo=
 github.com/dustin/go-humanize v1.0.0 h1:VSnTsYCnlFHaM2/igO1h6X3HA71jcobQuxemgkq4zYo=
 github.com/dustin/go-humanize v1.0.0/go.mod h1:HtrtbFcZ19U5GC7JDqmcUSB87Iq5E25KnS6fMYU6eOk=
 github.com/envoyproxy/go-control-plane v0.9.1-0.20191026205805-5f8ba28d4473/go.mod h1:YTl/9mNaCwkRvm6d1a2C3ymFceY/DCBVvsKhRF0iEA4=
