@@ -201,6 +201,8 @@ github.com/diamondburned/ningen/v2 v2.0.0-20201220054153-c69c4f7057b4 h1:qzh5ghf
 github.com/diamondburned/ningen/v2 v2.0.0-20201220054153-c69c4f7057b4/go.mod h1:2ZjyeHqO9jCdlfmJhhVhk8eCumx418n39uVaC/LgEgY=
 github.com/diamondburned/ningen/v2 v2.0.0-20201227020621-a4e33db11d3c h1:IWn/N54JkJz7PVgmAt7cWXLky9wY0UjXzznNoWLIFgA=
 github.com/diamondburned/ningen/v2 v2.0.0-20201227020621-a4e33db11d3c/go.mod h1:zQkAo1RT4ru4HW6B5T4IRO2pee8ITzTUA2Y7XNpgjqo=
+github.com/diamondburned/ningen/v2 v2.0.0-20201227034843-dc1d22fc28e4 h1:ptIpcyB/FIBM5viKLVXuBiE1utqBcH4S3l5kUQrsL9Q=
+github.com/diamondburned/ningen/v2 v2.0.0-20201227034843-dc1d22fc28e4/go.mod h1:zQkAo1RT4ru4HW6B5T4IRO2pee8ITzTUA2Y7XNpgjqo=
 github.com/dustin/go-humanize v1.0.0 h1:VSnTsYCnlFHaM2/igO1h6X3HA71jcobQuxemgkq4zYo=
 github.com/dustin/go-humanize v1.0.0/go.mod h1:HtrtbFcZ19U5GC7JDqmcUSB87Iq5E25KnS6fMYU6eOk=
 github.com/envoyproxy/go-control-plane v0.9.1-0.20191026205805-5f8ba28d4473/go.mod h1:YTl/9mNaCwkRvm6d1a2C3ymFceY/DCBVvsKhRF0iEA4=
