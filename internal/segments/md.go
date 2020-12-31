@@ -18,10 +18,19 @@ import (
 )
 
 func ParseMessage(m *discord.Message, s store.Cabinet) text.Rich {
+	var rich text.Rich
+	ParseMessageRich(&rich, m, s)
+	return rich
+}
+
+func ParseMessageRich(rich *text.Rich, m *discord.Message, s store.Cabinet) {
 	var content = []byte(m.Content)
 	var node = md.ParseWithMessage(content, s, m, true)
 
 	r := renderer.New(content, node)
+	r.Buffer.Grow(len(rich.Content))
+	r.Buffer.WriteString(rich.Content)
+
 	// Register the needed states for some renderers.
 	r.WithState(m, s)
 	// Render the main message body.
@@ -30,13 +39,16 @@ func ParseMessage(m *discord.Message, s store.Cabinet) text.Rich {
 	embed.RenderAttachments(r, m.Attachments)
 	embed.RenderEmbeds(r, m.Embeds, m, s)
 
-	return text.Rich{
-		Content:  r.String(),
-		Segments: r.Segments,
-	}
+	rich.Content = r.String()
+	rich.Segments = append(rich.Segments, r.Segments...)
 }
 
 func ParseWithMessage(b []byte, m *discord.Message, s store.Cabinet, msg bool) text.Rich {
+	node := md.ParseWithMessage(b, s, m, msg)
+	return renderer.RenderNode(b, node)
+}
+
+func ParseWithMessageRich(b []byte, m *discord.Message, s store.Cabinet, msg bool) text.Rich {
 	node := md.ParseWithMessage(b, s, m, msg)
 	return renderer.RenderNode(b, node)
 }

@@ -56,13 +56,6 @@ func richMember(
 
 	start, end = segutil.Write(rich, displayName)
 
-	// Update the color.
-	if c := discord.MemberColor(g, m); c > 0 {
-		rich.Segments = append(rich.Segments,
-			colored.NewSegment(start, end, c.Uint32()),
-		)
-	}
-
 	// Append the bot prefix if the user is a bot.
 	if m.User.Bot {
 		rich.Content += " "
@@ -157,6 +150,7 @@ func (a *Author) AddMessageReference(msgref discord.Message, s *state.Instance) 
 	m, err := s.Cabinet.Member(g.ID, msgref.Author.ID)
 	if err != nil {
 		a.addAuthorReference(msgref, s)
+		s.MemberState.RequestMember(msgref.GuildID, msgref.Author.ID)
 		return
 	}
 

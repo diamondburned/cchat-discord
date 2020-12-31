@@ -1,6 +1,7 @@
 package mention
 
 import (
+	"github.com/diamondburned/arikawa/v2/discord"
 	"github.com/diamondburned/cchat-discord/internal/segments/renderer"
 	"github.com/diamondburned/cchat/text"
 	"github.com/diamondburned/cchat/utils/empty"
@@ -55,7 +56,7 @@ func (s Segment) Bounds() (start, end int) {
 
 func (s Segment) AsColorer() text.Colorer {
 	switch {
-	case s.User != nil:
+	case s.User != nil && s.User.HasColor():
 		return s.User
 	case s.Role != nil:
 		return s.Role
@@ -80,4 +81,24 @@ func (s Segment) AsMentioner() text.Mentioner {
 		return s.User
 	}
 	return nil
+}
+
+func MemberColor(guild discord.Guild, member discord.Member) (c uint32, ok bool) {
+	var pos int
+
+	for _, r := range guild.Roles {
+		for _, mr := range member.RoleIDs {
+			if mr != r.ID {
+				continue
+			}
+
+			if r.Color > 0 && r.Position > pos {
+				c = r.Color.Uint32()
+				ok = true
+				pos = r.Position
+			}
+		}
+	}
+
+	return
 }

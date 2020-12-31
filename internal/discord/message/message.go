@@ -9,6 +9,7 @@ import (
 	"github.com/diamondburned/cchat-discord/internal/discord/state"
 	"github.com/diamondburned/cchat-discord/internal/segments"
 	"github.com/diamondburned/cchat-discord/internal/segments/mention"
+	"github.com/diamondburned/cchat-discord/internal/segments/reference"
 	"github.com/diamondburned/cchat/text"
 )
 
@@ -101,6 +102,11 @@ func NewMessageUpdateContent(msg discord.Message, s *state.Instance) Message {
 func NewMessageUpdateAuthor(
 	msg discord.Message, member discord.Member, g discord.Guild, s *state.Instance) Message {
 
+	author := NewGuildMember(member, g, s)
+	if ref := ReferencedMessage(msg, s, true); ref != nil {
+		author.AddMessageReference(*ref, s)
+	}
+
 	return Message{
 		messageHeader: newHeader(msg),
 		author:        NewGuildMember(member, g, s),
@@ -156,8 +162,25 @@ func NewDirectMessage(m discord.Message, s *state.Instance) Message {
 }
 
 func NewMessage(m discord.Message, s *state.Instance, author Author) Message {
+	var content text.Rich
+
+	if ref := ReferencedMessage(m, s, true); ref != nil {
+		// TODO: markup support
+		var refmsg = "> " + ref.Content
+		if len(refmsg) > 120 {
+			refmsg = refmsg[:120] + "..."
+		}
+
+		content.Content = refmsg + "\n"
+		content.Segments = []text.Segment{
+			reference.NewMessageSegment(0, len(refmsg), ref.ID),
+		}
+
+		author.AddMessageReference(*ref, s)
+	}
+
 	// Render the message content.
-	var content = segments.ParseMessage(&m, s.Cabinet)
+	segments.ParseMessageRich(&content, &m, s.Cabinet)
 
 	// Request members in mentions if we're in a guild.
 	if m.GuildID.IsValid() {
@@ -205,4 +228,24 @@ func (m Message) Nonce() string {
 
 func (m Message) Mentioned() bool {
 	return m.mentioned
+}
+
+// ReferencedMessage searches for the referenced message if needed.
+func ReferencedMessage(m discord.Message, s *state.Instance, wait bool) (reply *discord.Message) {
+	if m.ReferencedMessage != nil {
+		return m.ReferencedMessage
+	}
+
+	// Deleted or does not exist.
+	if m.Reference == nil || !m.Reference.MessageID.IsValid() {
+		return nil
+	}
+
+	if !wait {
+		reply, _ = s.Cabinet.Message(m.Reference.ChannelID, m.Reference.MessageID)
+	} else {
+		reply, _ = s.Message(m.Reference.ChannelID, m.Reference.MessageID)
+	}
+
+	return
 }

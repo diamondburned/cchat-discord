@@ -9,6 +9,7 @@ import (
 	"github.com/diamondburned/cchat-discord/internal/segments/colored"
 	"github.com/diamondburned/cchat-discord/internal/segments/inline"
 	"github.com/diamondburned/cchat-discord/internal/segments/segutil"
+	"github.com/diamondburned/cchat-discord/internal/urlutils"
 	"github.com/diamondburned/cchat/text"
 	"github.com/diamondburned/cchat/utils/empty"
 	"github.com/diamondburned/ningen/v2"
@@ -63,7 +64,7 @@ func (m NameSegment) AsAvatarer() text.Avatarer   { return &m.um }
 // AsColorer only returns User if the user actually has a colored role.
 func (m NameSegment) AsColorer() text.Colorer {
 	if m.um.HasColor() {
-		return &m.um
+		return m.um
 	}
 	return nil
 }
@@ -82,8 +83,7 @@ var (
 	_ text.Mentioner = (*User)(nil)
 )
 
-// NewUser creates a new user mention. If state is of type *ningen.State, then
-// it'll fetch additional information asynchronously.
+// NewUser creates a new user mention.
 func NewUser(store store.Cabinet, guild discord.GuildID, guser discord.GuildUser) *User {
 	if guser.Member == nil {
 		m, err := store.Member(guild, guser.ID)
@@ -111,6 +111,7 @@ func NewUser(store store.Cabinet, guild discord.GuildID, guser discord.GuildUser
 
 func (um *User) WithState(state *ningen.State) {
 	um.ningen = state
+	um.store = state.Cabinet
 }
 
 // HasColor returns true if the current user has a color.
@@ -125,7 +126,8 @@ func (um User) HasColor() bool {
 		return false
 	}
 
-	return discord.MemberColor(*g, um.Member) > 0
+	_, ok := MemberColor(*g, um.Member)
+	return ok
 }
 
 func (um User) Color() uint32 {
@@ -134,12 +136,12 @@ func (um User) Color() uint32 {
 		return colored.Blurple
 	}
 
-	var color = discord.MemberColor(*g, um.Member)
-	if color == 0 {
+	color, ok := MemberColor(*g, um.Member)
+	if !ok {
 		return colored.Blurple
 	}
 
-	return text.SolidColor(color.Uint32())
+	return text.SolidColor(color)
 }
 
 func (um User) AvatarSize() int {
@@ -154,7 +156,7 @@ func (um User) AvatarText() string {
 }
 
 func (um User) Avatar() (url string) {
-	return um.Member.User.AvatarURL()
+	return urlutils.AvatarURL(um.Member.User.AvatarURL())
 }
 
 func (um User) MentionInfo() text.Rich {

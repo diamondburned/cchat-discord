@@ -21,6 +21,8 @@ func Register(kind ast.NodeKind, r Renderer) {
 	renderers[kind] = r
 }
 
+var smallRenderers = map[ast.NodeKind]Renderer{}
+
 // Parse parses the raw Markdown bytes into a rich text.
 func Parse(b []byte) text.Rich {
 	node := md.Parse(b)
@@ -188,10 +190,10 @@ func (r *Text) RenderNode(n ast.Node, enter bool) (ast.WalkStatus, error) {
 	switch n := n.(type) {
 	case *ast.Document:
 	case *ast.Paragraph:
-		if !enter {
-			// TODO: investigate
-			// r.Buffer.WriteByte('\n')
-		}
+		// if !enter {
+		// TODO: investigate
+		// r.Buffer.WriteByte('\n')
+		// }
 	case *ast.String:
 		if enter {
 			r.Buffer.Write(n.Value)
