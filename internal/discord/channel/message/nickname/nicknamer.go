@@ -38,6 +38,8 @@ func (nn Nicknamer) Nickname(ctx context.Context, labeler cchat.LabelContainer) 
 		return func() {}, nil
 	}
 
+	nn.tryNicknameLabel(ctx, labeler)
+
 	return funcutil.JoinCancels(
 		nn.State.AddHandler(func(chunks *gateway.GuildMembersChunkEvent) {
 			if chunks.GuildID != nn.GuildID {
@@ -66,11 +68,9 @@ func (nn Nicknamer) tryNicknameLabel(ctx context.Context, labeler cchat.LabelCon
 	state := nn.State.WithContext(ctx)
 
 	m, err := state.Cabinet.Member(nn.GuildID, nn.userID)
-	if err != nil {
-		return
+	if err == nil {
+		nn.setMember(labeler, *m)
 	}
-
-	nn.setMember(labeler, *m)
 }
 
 func (nn Nicknamer) setMember(labeler cchat.LabelContainer, m discord.Member) {

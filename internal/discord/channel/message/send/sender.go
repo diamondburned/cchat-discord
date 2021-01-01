@@ -12,11 +12,22 @@ import (
 
 func WrapMessage(s *state.Instance, msg cchat.SendableMessage) api.SendMessageData {
 	var send = api.SendMessageData{Content: msg.Content()}
-	if attacher := msg.AsAttachments(); attacher != nil {
+
+	if attacher := msg.AsAttacher(); attacher != nil {
 		send.Files = addAttachments(attacher.Attachments())
 	}
+
 	if noncer := msg.AsNoncer(); noncer != nil {
 		send.Nonce = s.Nonces.Generate(noncer.Nonce())
+	}
+
+	if replier := msg.AsReplier(); replier != nil {
+		id, err := discord.ParseSnowflake(replier.ReplyingTo())
+		if err == nil {
+			send.Reference = &discord.MessageReference{
+				MessageID: discord.MessageID(id),
+			}
+		}
 	}
 
 	return send

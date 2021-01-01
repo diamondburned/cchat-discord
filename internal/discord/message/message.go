@@ -1,6 +1,7 @@
 package message
 
 import (
+	"strings"
 	"time"
 
 	"github.com/diamondburned/arikawa/v2/discord"
@@ -171,7 +172,7 @@ func NewMessage(m discord.Message, s *state.Instance, author Author) Message {
 			refmsg = refmsg[:120] + "..."
 		}
 
-		content.Content = refmsg + "\n"
+		content.Content = strings.ReplaceAll(refmsg, "\n", "  ") + "\n"
 		content.Segments = []text.Segment{
 			reference.NewMessageSegment(0, len(refmsg), ref.ID),
 		}

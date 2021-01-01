@@ -2,6 +2,7 @@ package session
 
 import (
 	"context"
+	"log"
 
 	"github.com/diamondburned/arikawa/v2/gateway"
 	"github.com/diamondburned/arikawa/v2/session"
@@ -84,7 +85,7 @@ func (s *Session) Servers(container cchat.ServersContainer) error {
 
 	// Set the entire container again once reconnected.
 	s.state.AddHandler(func(*ningen.Connected) {
-		s.servers(container)
+		log.Println("[Discord] ningen.Connected received, error:", s.servers(container))
 	})
 
 	return s.servers(container)
