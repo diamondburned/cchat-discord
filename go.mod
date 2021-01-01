@@ -3,9 +3,9 @@ module github.com/diamondburned/cchat-discord
 go 1.14
 
 require (
-	github.com/diamondburned/arikawa/v2 v2.0.0-20201227001310-f3f075b27f44
+	github.com/diamondburned/arikawa/v2 v2.0.0-20210101083335-169b36126239
 	github.com/diamondburned/cchat v0.3.15
-	github.com/diamondburned/ningen/v2 v2.0.0-20201227034843-dc1d22fc28e4
+	github.com/diamondburned/ningen/v2 v2.0.0-20210101084041-d9a5058b63b5
 	github.com/dustin/go-humanize v1.0.0
 	github.com/go-test/deep v1.0.7
 	github.com/lithammer/fuzzysearch v1.1.1

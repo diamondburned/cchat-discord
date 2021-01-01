@@ -64,7 +64,7 @@ func (m NameSegment) AsAvatarer() text.Avatarer   { return &m.um }
 // AsColorer only returns User if the user actually has a colored role.
 func (m NameSegment) AsColorer() text.Colorer {
 	if m.um.HasColor() {
-		return m.um
+		return &m.um
 	}
 	return nil
 }
@@ -75,6 +75,10 @@ type User struct {
 
 	Guild  discord.Guild
 	Member discord.Member
+
+	color        uint32
+	hasColor     bool
+	fetchedColor bool
 }
 
 var (
@@ -115,51 +119,53 @@ func (um *User) WithState(state *ningen.State) {
 }
 
 // HasColor returns true if the current user has a color.
-func (um User) HasColor() bool {
+func (um *User) HasColor() bool {
+	if um.fetchedColor {
+		return um.hasColor
+	}
+
 	// We don't have any member color if we have neither the member nor guild.
 	if !um.Guild.ID.IsValid() || !um.Member.User.ID.IsValid() {
+		um.fetchedColor = true
 		return false
 	}
 
 	g, err := um.store.Guild(um.Guild.ID)
 	if err != nil {
+		um.fetchedColor = true
 		return false
 	}
 
-	_, ok := MemberColor(*g, um.Member)
-	return ok
+	um.fetchedColor = true
+	um.color, um.hasColor = MemberColor(*g, um.Member)
+
+	return um.hasColor
 }
 
-func (um User) Color() uint32 {
-	g, err := um.store.Guild(um.Guild.ID)
-	if err != nil {
-		return colored.Blurple
+func (um *User) Color() uint32 {
+	if um.HasColor() {
+		return text.SolidColor(um.color)
 	}
 
-	color, ok := MemberColor(*g, um.Member)
-	if !ok {
-		return colored.Blurple
-	}
-
-	return text.SolidColor(color)
+	return colored.Blurple
 }
 
-func (um User) AvatarSize() int {
+func (um *User) AvatarSize() int {
 	return 96
 }
 
-func (um User) AvatarText() string {
+func (um *User) AvatarText() string {
 	if um.Member.Nick != "" {
 		return um.Member.Nick
 	}
 	return um.Member.User.Username
 }
 
-func (um User) Avatar() (url string) {
+func (um *User) Avatar() (url string) {
 	return urlutils.AvatarURL(um.Member.User.AvatarURL())
 }
 
-func (um User) MentionInfo() text.Rich {
+func (um *User) MentionInfo() text.Rich {
 	var content bytes.Buffer
 	var segment text.Rich
 
