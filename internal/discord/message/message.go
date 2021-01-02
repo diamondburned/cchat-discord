@@ -174,7 +174,7 @@ func NewMessage(m discord.Message, s *state.Instance, author Author) Message {
 
 		content.Content = strings.ReplaceAll(refmsg, "\n", "  ") + "\n"
 		content.Segments = []text.Segment{
-			reference.NewMessageSegment(0, len(refmsg), ref.ID),
+			reference.NewMessageSegment(0, len(content.Content), ref.ID),
 		}
 
 		author.AddMessageReference(*ref, s)
@@ -186,22 +186,20 @@ func NewMessage(m discord.Message, s *state.Instance, author Author) Message {
 	// Request members in mentions if we're in a guild.
 	if m.GuildID.IsValid() {
 		for _, segment := range content.Segments {
-			if mention, ok := segment.(*mention.Segment); ok {
-				// If this is not a user mention, then skip.
-				if mention.User == nil {
-					continue
-				}
-
-				// If we already have a member, then skip. We could check this
-				// using the timestamp, as we might have a user set into the
-				// member field
-				if mention.User.Member.Joined.IsValid() {
-					continue
-				}
-
-				// Request the member.
-				s.MemberState.RequestMember(m.GuildID, mention.User.Member.User.ID)
+			mention, ok := segment.(*mention.Segment)
+			if !ok {
+				continue
 			}
+
+			// If this is not a user mention, then skip. If we already have a
+			// member, then skip. We could check this using the timestamp, as we
+			// might have a user set into the member field.
+			if mention.User == nil || mention.User.Member.Joined.IsValid() {
+				continue
+			}
+
+			// Request the member.
+			s.MemberState.RequestMember(m.GuildID, mention.User.Member.User.ID)
 		}
 	}
 
@@ -233,13 +231,24 @@ func (m Message) Mentioned() bool {
 
 // ReferencedMessage searches for the referenced message if needed.
 func ReferencedMessage(m discord.Message, s *state.Instance, wait bool) (reply *discord.Message) {
-	if m.ReferencedMessage != nil {
-		return m.ReferencedMessage
-	}
-
 	// Deleted or does not exist.
 	if m.Reference == nil || !m.Reference.MessageID.IsValid() {
 		return nil
+	}
+
+	// Check these in case.
+	if !m.Reference.ChannelID.IsValid() {
+		m.Reference.ChannelID = m.ChannelID
+	}
+	if !m.Reference.GuildID.IsValid() {
+		m.Reference.GuildID = m.GuildID
+	}
+
+	if m.ReferencedMessage != nil {
+		// Set these in case Discord acts dumb.
+		m.ReferencedMessage.GuildID = m.Reference.GuildID
+		m.ReferencedMessage.ChannelID = m.Reference.ChannelID
+		return m.ReferencedMessage
 	}
 
 	if !wait {

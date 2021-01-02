@@ -64,26 +64,26 @@ func (msgr *Messenger) JoinServer(ctx context.Context, ct cchat.MessagesContaine
 				return
 			}
 
-			m, err := msgr.Messages()
+			messages, err := msgr.Messages()
 			if err != nil {
 				// TODO: log
 				return
 			}
 
-			g, err := msgr.Guild()
+			guild, err := msgr.Guild()
 			if err != nil {
 				return
 			}
 
 			// Loop over all messages and replace the author. The latest
 			// messages are in front.
-			for _, msg := range m {
-				for _, member := range c.Members {
-					if msg.Author.ID != member.User.ID {
+			for _, msg := range messages {
+				for _, m := range c.Members {
+					if msg.Author.ID != m.User.ID {
 						continue
 					}
 
-					ct.UpdateMessage(message.NewMessageUpdateAuthor(msg, member, *g, msgr.State))
+					ct.UpdateMessage(message.NewMessageUpdateAuthor(msg, m, *guild, msgr.State))
 				}
 			}
 		}))

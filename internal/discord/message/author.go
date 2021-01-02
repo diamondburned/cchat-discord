@@ -135,22 +135,22 @@ func (a *Author) addAuthorReference(msgref discord.Message, s *state.Instance) {
 }
 
 // AddMessageReference adds a message reference to the author.
-func (a *Author) AddMessageReference(msgref discord.Message, s *state.Instance) {
-	if !msgref.GuildID.IsValid() {
-		a.addAuthorReference(msgref, s)
+func (a *Author) AddMessageReference(ref discord.Message, s *state.Instance) {
+	if !ref.GuildID.IsValid() {
+		a.addAuthorReference(ref, s)
 		return
 	}
 
-	g, err := s.Cabinet.Guild(msgref.GuildID)
+	g, err := s.Cabinet.Guild(ref.GuildID)
 	if err != nil {
-		a.addAuthorReference(msgref, s)
+		a.addAuthorReference(ref, s)
 		return
 	}
 
-	m, err := s.Cabinet.Member(g.ID, msgref.Author.ID)
+	m, err := s.Cabinet.Member(g.ID, ref.Author.ID)
 	if err != nil {
-		a.addAuthorReference(msgref, s)
-		s.MemberState.RequestMember(msgref.GuildID, msgref.Author.ID)
+		a.addAuthorReference(ref, s)
+		s.MemberState.RequestMember(g.ID, ref.Author.ID)
 		return
 	}
 
@@ -158,6 +158,6 @@ func (a *Author) AddMessageReference(msgref discord.Message, s *state.Instance) 
 	start, end := richMember(&a.name, *m, *g, s)
 
 	a.name.Segments = append(a.name.Segments,
-		reference.NewMessageSegment(start, end, msgref.ID),
+		reference.NewMessageSegment(start, end, ref.ID),
 	)
 }
