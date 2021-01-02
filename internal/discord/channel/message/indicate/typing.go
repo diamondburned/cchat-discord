@@ -7,6 +7,7 @@ import (
 	"github.com/diamondburned/cchat"
 	"github.com/diamondburned/cchat-discord/internal/discord/channel/shared"
 	"github.com/diamondburned/cchat-discord/internal/discord/channel/typer"
+	"github.com/diamondburned/cchat-discord/internal/discord/config"
 )
 
 type TypingIndicator struct {
@@ -18,6 +19,10 @@ func NewTyping(ch shared.Channel) cchat.TypingIndicator {
 }
 
 func (ti TypingIndicator) Typing() error {
+	if !config.BroadcastTyping() {
+		return nil
+	}
+
 	return ti.State.Typing(ti.ID)
 }
 

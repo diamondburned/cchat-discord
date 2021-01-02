@@ -3,6 +3,7 @@ package discord
 import (
 	"github.com/diamondburned/cchat"
 	"github.com/diamondburned/cchat-discord/internal/discord/authenticate"
+	"github.com/diamondburned/cchat-discord/internal/discord/config"
 	"github.com/diamondburned/cchat-discord/internal/discord/session"
 	"github.com/diamondburned/cchat/services"
 	"github.com/diamondburned/cchat/text"
@@ -33,4 +34,8 @@ func (Service) AsIconer() cchat.Iconer {
 
 func (Service) AsSessionRestorer() cchat.SessionRestorer {
 	return session.Restorer
+}
+
+func (Service) AsConfigurator() cchat.Configurator {
+	return config.World
 }
