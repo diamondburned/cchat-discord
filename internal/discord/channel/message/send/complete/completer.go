@@ -21,7 +21,7 @@ type Completer struct {
 	SlashHandler cchat.Completer
 }
 
-const MaxCompletion = 15
+const MaxCompletion = 50
 
 func New(ch shared.Channel) cchat.Completer {
 	completer := ChannelCompleter{ch}

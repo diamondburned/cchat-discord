@@ -25,16 +25,12 @@ type messageHeader struct {
 var _ cchat.MessageHeader = (*messageHeader)(nil)
 
 func newHeader(msg discord.Message) messageHeader {
-	var h = messageHeader{
+	return messageHeader{
 		id:        msg.ID,
 		time:      msg.Timestamp,
 		channelID: msg.ChannelID,
 		guildID:   msg.GuildID,
 	}
-	if msg.EditedTimestamp.IsValid() {
-		h.time = msg.EditedTimestamp
-	}
-	return h
 }
 
 func newHeaderNonce(msg discord.Message, nonce string) messageHeader {

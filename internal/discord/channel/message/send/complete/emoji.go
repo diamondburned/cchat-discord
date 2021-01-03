@@ -44,7 +44,7 @@ GuildSearch:
 				Raw:       raw,
 				Text:      text.Rich{Content: ":" + emoji.Name + ":"},
 				Secondary: text.Rich{Content: guild.Name},
-				IconURL:   urlutils.Sized(emoji.EmojiURL(), 32), // small
+				IconURL:   urlutils.Sized(emoji.EmojiURL(), 64),
 				Image:     true,
 			})
 

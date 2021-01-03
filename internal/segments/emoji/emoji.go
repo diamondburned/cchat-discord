@@ -1,10 +1,9 @@
 package emoji
 
 import (
-	"net/url"
-
 	"github.com/diamondburned/arikawa/v2/discord"
 	"github.com/diamondburned/cchat-discord/internal/segments/renderer"
+	"github.com/diamondburned/cchat-discord/internal/urlutils"
 	"github.com/diamondburned/cchat/text"
 	"github.com/diamondburned/cchat/utils/empty"
 	"github.com/diamondburned/ningen/v2/md"
@@ -42,16 +41,7 @@ type Emoji struct {
 var _ text.Imager = (*Emoji)(nil)
 
 func injectSizeURL(fullURL string) string {
-	u, err := url.Parse(fullURL)
-	if err != nil {
-		return fullURL
-	}
-
-	v := u.Query()
-	v.Set("size", "64")
-
-	u.RawQuery = v.Encode()
-	return u.String()
+	return urlutils.Sized(fullURL, 64)
 }
 
 func EmojiFromNode(n *md.Emoji) Emoji {
@@ -65,8 +55,8 @@ func EmojiFromNode(n *md.Emoji) Emoji {
 func EmojiFromDiscord(e discord.Emoji, large bool) Emoji {
 	return Emoji{
 		Name:     e.Name,
-		EmojiURL: injectSizeURL(e.EmojiURL()),
 		Large:    large,
+		EmojiURL: injectSizeURL(e.EmojiURL()),
 	}
 }
 

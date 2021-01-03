@@ -6,6 +6,7 @@ import (
 	"github.com/diamondburned/cchat"
 	"github.com/diamondburned/cchat-discord/internal/discord/message"
 	"github.com/diamondburned/cchat-discord/internal/discord/state"
+	"github.com/diamondburned/cchat-discord/internal/urlutils"
 	"github.com/diamondburned/cchat/text"
 )
 
@@ -108,7 +109,7 @@ func AllUsers(s *state.Instance, word string) []cchat.CompletionEntry {
 			Raw:       raw,
 			Text:      text.Plain(r.User.Username + "#" + r.User.Discriminator),
 			Secondary: text.Plain(FormatStatus(status) + " - " + FormatRelationshipType(r.Type)),
-			IconURL:   r.User.AvatarURL(),
+			IconURL:   urlutils.AvatarURL(r.User.AvatarURL()),
 		})
 
 		distances[raw] = rank
@@ -142,7 +143,7 @@ func AllUsers(s *state.Instance, word string) []cchat.CompletionEntry {
 			Raw:       raw,
 			Text:      text.Plain(p.User.Username + "#" + p.User.Discriminator),
 			Secondary: text.Plain(FormatStatus(p.Status)),
-			IconURL:   p.User.AvatarURL(),
+			IconURL:   urlutils.AvatarURL(p.User.AvatarURL()),
 		})
 
 		distances[raw] = rank
@@ -222,7 +223,7 @@ func (ch ChannelCompleter) CompleteMentions(word string) []cchat.CompletionEntry
 				Raw:       raw,
 				Text:      text.Rich{Content: u.Username},
 				Secondary: text.Rich{Content: u.Username + "#" + u.Discriminator},
-				IconURL:   u.AvatarURL(),
+				IconURL:   urlutils.AvatarURL(u.AvatarURL()),
 			})
 
 			distances[raw] = rank
@@ -266,7 +267,7 @@ func (ch ChannelCompleter) CompleteMentions(word string) []cchat.CompletionEntry
 			Raw:       raw,
 			Text:      message.RenderMemberName(mem, *g, ch.State),
 			Secondary: text.Plain(mem.User.Username + "#" + mem.User.Discriminator),
-			IconURL:   mem.User.AvatarURL(),
+			IconURL:   urlutils.AvatarURL(mem.User.AvatarURL()),
 		})
 
 		distances[raw] = rank
