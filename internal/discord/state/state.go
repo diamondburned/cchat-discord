@@ -88,6 +88,13 @@ func New(s *state.State) (*Instance, error) {
 	}, nil
 }
 
+// Permissions queries for the permission without hitting the REST API.
+func (s *Instance) Permissions(
+	chID discord.ChannelID, uID discord.UserID) (discord.Permissions, error) {
+
+	return s.StateOnly().Permissions(chID, uID)
+}
+
 // StateOnly returns a shallow copy of *State with an already-expired context.
 func (s *Instance) StateOnly() *state.State {
 	ctx, cancel := context.WithCancel(context.Background())

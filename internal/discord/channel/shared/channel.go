@@ -67,7 +67,7 @@ func (ch Channel) HasPermission(perms ...discord.Permissions) bool {
 		return true
 	}
 
-	p, err := ch.State.StateOnly().Permissions(ch.ID, ch.State.UserID)
+	p, err := ch.State.Permissions(ch.ID, ch.State.UserID)
 	if err != nil {
 		return false
 	}

@@ -72,12 +72,7 @@ func (s Sender) Send(msg cchat.SendableMessage) error {
 
 // CanAttach returns true if the channel can attach files.
 func (s Sender) CanAttach() bool {
-	p, err := s.State.StateOnly().Permissions(s.ID, s.State.UserID)
-	if err != nil {
-		return false
-	}
-
-	return p.Has(discord.PermissionAttachFiles)
+	return s.HasPermission(discord.PermissionAttachFiles)
 }
 
 func (s Sender) AsCompleter() cchat.Completer {
