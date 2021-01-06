@@ -67,7 +67,7 @@ func (gf *GuildFolder) Servers(container cchat.ServersContainer) error {
 	var servers = make([]cchat.Server, 0, len(gf.GuildIDs))
 
 	for _, id := range gf.GuildIDs {
-		g, err := gf.state.Guild(id)
+		g, err := gf.state.Cabinet.Guild(id)
 		if err != nil {
 			continue
 		}

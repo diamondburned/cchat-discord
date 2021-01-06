@@ -178,7 +178,7 @@ var World = Commands{
 				return nil, err
 			}
 
-			m, err := ch.State.Member(ch.GuildID, user.ID())
+			m, err := ch.State.Cabinet.Member(ch.GuildID, user.ID())
 			if err != nil {
 				return nil, err
 			}

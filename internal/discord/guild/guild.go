@@ -30,7 +30,7 @@ func New(s *state.Instance, g *discord.Guild) cchat.Server {
 }
 
 func NewFromID(s *state.Instance, gID discord.GuildID) (cchat.Server, error) {
-	g, err := s.Guild(gID)
+	g, err := s.Cabinet.Guild(gID)
 	if err != nil {
 		return nil, err
 	}
@@ -38,11 +38,7 @@ func NewFromID(s *state.Instance, gID discord.GuildID) (cchat.Server, error) {
 	return New(s, g), nil
 }
 
-func (g *Guild) self(ctx context.Context) (*discord.Guild, error) {
-	return g.state.WithContext(ctx).Guild(g.id)
-}
-
-func (g *Guild) selfState() (*discord.Guild, error) {
+func (g *Guild) self() (*discord.Guild, error) {
 	return g.state.Cabinet.Guild(g.id)
 }
 
@@ -51,7 +47,7 @@ func (g *Guild) ID() cchat.ID {
 }
 
 func (g *Guild) Name() text.Rich {
-	s, err := g.selfState()
+	s, err := g.self()
 	if err != nil {
 		// This shouldn't happen.
 		return text.Rich{Content: g.id.String()}
@@ -63,7 +59,7 @@ func (g *Guild) Name() text.Rich {
 func (g *Guild) AsIconer() cchat.Iconer { return g }
 
 func (g *Guild) Icon(ctx context.Context, iconer cchat.IconContainer) (func(), error) {
-	s, err := g.self(ctx)
+	s, err := g.self()
 	if err != nil {
 		// This shouldn't happen.
 		return nil, errors.Wrap(err, "Failed to get guild")
