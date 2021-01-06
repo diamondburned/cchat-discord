@@ -24,8 +24,10 @@ type Member struct {
 func NewMember(ch shared.Channel, opItem gateway.GuildMemberListOpItem) cchat.ListMember {
 	user := mention.NewUser(opItem.Member.User)
 	user.WithState(ch.State.State)
-	user.SetMember(ch.GuildID, &opItem.Member.Member)
-	user.SetPresence(opItem.Member.Presence)
+	user.WithMember(opItem.Member.Member)
+	user.WithGuildID(ch.GuildID)
+	user.WithPresence(opItem.Member.Presence)
+	user.Prefetch()
 
 	return &Member{
 		channel:  ch,

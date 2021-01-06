@@ -3,93 +3,48 @@ package message
 import (
 	"github.com/diamondburned/arikawa/v2/discord"
 	"github.com/diamondburned/cchat"
+	"github.com/diamondburned/cchat-discord/internal/discord/channel/shared"
 	"github.com/diamondburned/cchat-discord/internal/discord/state"
 	"github.com/diamondburned/cchat-discord/internal/segments/colored"
 	"github.com/diamondburned/cchat-discord/internal/segments/mention"
 	"github.com/diamondburned/cchat-discord/internal/segments/reference"
 	"github.com/diamondburned/cchat-discord/internal/segments/segutil"
-	"github.com/diamondburned/cchat-discord/internal/urlutils"
 	"github.com/diamondburned/cchat/text"
 )
 
 type Author struct {
-	id     discord.UserID
-	name   text.Rich
-	avatar string
+	name text.Rich
+	user *mention.User // same pointer as in name
 }
 
 var _ cchat.Author = (*Author)(nil)
 
-func NewUser(u discord.User, s *state.Instance) Author {
-	var rich text.Rich
-	richUser(&rich, u, s)
-
+// NewAuthor creates a new message author.
+func NewAuthor(user *mention.User) Author {
 	return Author{
-		id:     u.ID,
-		name:   rich,
-		avatar: urlutils.AvatarURL(u.AvatarURL()),
+		name: RenderAuthorName(user),
+		user: user,
 	}
 }
 
-func NewGuildMember(m discord.Member, g discord.Guild, s *state.Instance) Author {
-	return Author{
-		id:     m.User.ID,
-		name:   RenderMemberName(m, g, s),
-		avatar: urlutils.AvatarURL(m.User.AvatarURL()),
-	}
-}
-
-func RenderMemberName(m discord.Member, g discord.Guild, s *state.Instance) text.Rich {
+// RenderAuthorName renders the given user mention into a text segment.
+func RenderAuthorName(user *mention.User) text.Rich {
 	var rich text.Rich
-	richMember(&rich, m, g, s)
+	richUser(&rich, user)
 	return rich
 }
 
 // richMember appends the member name directly into rich.
-func richMember(rich *text.Rich,
-	m discord.Member, g discord.Guild, s *state.Instance) (start, end int) {
-
-	var displayName = m.User.Username
-	if m.Nick != "" {
-		displayName = m.Nick
-	}
-
-	start, end = segutil.Write(rich, displayName)
+func richUser(rich *text.Rich, user *mention.User) (start, end int) {
+	start, end = segutil.Write(rich, user.DisplayName())
 
 	// Append the bot prefix if the user is a bot.
-	if m.User.Bot {
+	if user.User().Bot {
 		rich.Content += " "
 		rich.Segments = append(rich.Segments,
 			colored.NewBlurple(segutil.Write(rich, "[BOT]")),
 		)
 	}
-
-	// Append a clickable user popup.
-	user := mention.NewUser(m.User)
-	user.WithState(s.State)
-	user.SetMember(g.ID, &m)
-
-	rich.Segments = append(rich.Segments, mention.NewSegment(start, end, user))
-
-	return
-}
-
-func richUser(rich *text.Rich,
-	u discord.User, s *state.Instance) (start, end int) {
-
-	start, end = segutil.Write(rich, u.Username)
-
-	// Append the bot prefix if the user is a bot.
-	if u.Bot {
-		rich.Content += " "
-		rich.Segments = append(rich.Segments,
-			colored.NewBlurple(segutil.Write(rich, "[BOT]")),
-		)
-	}
-
-	// Append a clickable user popup.
-	user := mention.NewUser(u)
-	user.WithState(s.State)
 
 	rich.Segments = append(rich.Segments, mention.NewSegment(start, end, user))
 
@@ -97,7 +52,7 @@ func richUser(rich *text.Rich,
 }
 
 func (a Author) ID() cchat.ID {
-	return a.id.String()
+	return a.user.UserID().String()
 }
 
 func (a Author) Name() text.Rich {
@@ -105,60 +60,54 @@ func (a Author) Name() text.Rich {
 }
 
 func (a Author) Avatar() string {
-	return a.avatar
+	return a.user.Avatar()
 }
 
 const authorReplyingTo = " replying to "
 
 // AddUserReply modifies Author to make it appear like it's a message reply.
-// Specifically, this function is used for direct messages.
+// Specifically, this function is used for direct messages in virtual channels.
 func (a *Author) AddUserReply(user discord.User, s *state.Instance) {
 	a.name.Content += authorReplyingTo
-	richUser(&a.name, user, s)
+
+	userMention := mention.NewUser(user)
+	userMention.WithState(s.State)
+	userMention.Prefetch()
+
+	richUser(&a.name, userMention)
 }
 
-func (a *Author) AddReply(name string) {
-	a.name.Content += authorReplyingTo + name
-}
+// AddChannelReply adds a reply pointing to a channel. If the given channel is a
+// direct message channel, then the first recipient will be used instead, and
+// the function will operate similar to AddUserReply.
+func (a *Author) AddChannelReply(ch discord.Channel, s *state.Instance) {
+	if ch.Type == discord.DirectMessage && len(ch.DMRecipients) > 0 {
+		a.AddUserReply(ch.DMRecipients[0], s)
+		return
+	}
 
-// // AddMemberReply modifies Author to make it appear like it's a message reply.
-// // Specifically, this function is used for guild messages.
-// func (a *Author) AddMemberReply(m discord.Member, g discord.Guild, s *state.Instance) {
-// 	a.name.Content += authorReplyingTo
-// 	richMember(&a.name, m, g, s)
-// }
-
-func (a *Author) addAuthorReference(msgref discord.Message, s *state.Instance) {
 	a.name.Content += authorReplyingTo
-	start, end := richUser(&a.name, msgref.Author, s)
+	start, end := segutil.Write(&a.name, shared.ChannelName(ch))
 
 	a.name.Segments = append(a.name.Segments,
-		reference.NewMessageSegment(start, end, msgref.ID),
+		mention.Segment{
+			Start:   start,
+			End:     end,
+			Channel: mention.NewChannel(ch),
+		},
 	)
 }
 
 // AddMessageReference adds a message reference to the author.
 func (a *Author) AddMessageReference(ref discord.Message, s *state.Instance) {
-	if !ref.GuildID.IsValid() {
-		a.addAuthorReference(ref, s)
-		return
-	}
-
-	g, err := s.Cabinet.Guild(ref.GuildID)
-	if err != nil {
-		a.addAuthorReference(ref, s)
-		return
-	}
-
-	m, err := s.Cabinet.Member(g.ID, ref.Author.ID)
-	if err != nil {
-		a.addAuthorReference(ref, s)
-		s.MemberState.RequestMember(g.ID, ref.Author.ID)
-		return
-	}
-
 	a.name.Content += authorReplyingTo
-	start, end := richMember(&a.name, *m, *g, s)
+
+	userMention := mention.NewUser(ref.Author)
+	userMention.WithGuildID(ref.GuildID)
+	userMention.WithState(s.State)
+	userMention.Prefetch()
+
+	start, end := richUser(&a.name, userMention)
 
 	a.name.Segments = append(a.name.Segments,
 		reference.NewMessageSegment(start, end, ref.ID),

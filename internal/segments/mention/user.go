@@ -34,12 +34,6 @@ func NewSegment(start, end int, user *User) NameSegment {
 	}
 }
 
-// WithState assigns a ningen state into the given name segment. This allows the
-// popovers to have additional information such as user notes.
-func (m *NameSegment) WithState(state *ningen.State) {
-	m.um.WithState(state)
-}
-
 func (m NameSegment) Bounds() (start, end int) {
 	return m.start, m.end
 }
@@ -98,21 +92,24 @@ func (um *User) UserID() discord.UserID {
 }
 
 // SetGuildID sets the user's guild ID.
-func (um *User) SetGuildID(guildID discord.GuildID) {
+func (um *User) WithGuildID(guildID discord.GuildID) {
 	um.guildID = guildID
-	um.HasColor() // prefetch
 }
 
-// SetMember sets the internal member to reduce roundtrips or cache hits. m can
+// WithGuild sets the user's guild.
+func (um *User) WithGuild(guild discord.Guild) {
+	um.guildID = guild.ID
+	um.guild = &guild
+}
+
+// WithMember sets the internal member to reduce roundtrips or cache hits. m can
 // be nil.
-func (um *User) SetMember(gID discord.GuildID, m *discord.Member) {
-	um.guildID = gID
-	um.member = m
-	um.HasColor()
+func (um *User) WithMember(m discord.Member) {
+	um.member = &m
 }
 
-// SetPresence sets the internal presence to reduce roundtrips or cache hits.
-func (um *User) SetPresence(p gateway.Presence) {
+// WithPresence sets the internal presence to reduce roundtrips or cache hits.
+func (um *User) WithPresence(p gateway.Presence) {
 	um.presence = &p
 }
 
@@ -120,7 +117,12 @@ func (um *User) SetPresence(p gateway.Presence) {
 func (um *User) WithState(state *ningen.State) {
 	um.ningen = state
 	um.store = state.Cabinet
-	um.HasColor() // prefetch
+}
+
+// Prefetch prefetches everything in User.
+func (um *User) Prefetch() {
+	um.HasColor()
+	um.getPresence()
 }
 
 // DisplayName returns either the nickname or the username.

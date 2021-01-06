@@ -18,7 +18,6 @@ import (
 	"github.com/diamondburned/cchat-discord/internal/discord/message"
 	"github.com/diamondburned/cchat-discord/internal/funcutil"
 	"github.com/diamondburned/cchat/utils/empty"
-	"github.com/pkg/errors"
 )
 
 type Messenger struct {
@@ -42,19 +41,7 @@ func (msgr *Messenger) JoinServer(ctx context.Context, ct cchat.MessagesContaine
 
 	var addcancel = funcutil.NewCancels()
 
-	var constructor func(discord.Message) cchat.MessageCreate
-
 	if msgr.GuildID.IsValid() {
-		// Create the backlog without any member information.
-		g, err := state.Guild(msgr.GuildID)
-		if err != nil {
-			return nil, errors.Wrap(err, "Failed to get guild")
-		}
-
-		constructor = func(m discord.Message) cchat.MessageCreate {
-			return message.NewBacklogMessage(m, msgr.State, *g)
-		}
-
 		// Subscribe to typing events.
 		msgr.State.MemberState.Subscribe(msgr.GuildID)
 
@@ -64,33 +51,16 @@ func (msgr *Messenger) JoinServer(ctx context.Context, ct cchat.MessagesContaine
 				return
 			}
 
-			messages, err := msgr.Messages()
-			if err != nil {
-				// TODO: log
-				return
-			}
+			messages, _ := msgr.Messages()
 
-			guild, err := msgr.Guild()
-			if err != nil {
-				return
-			}
-
-			// Loop over all messages and replace the author. The latest
-			// messages are in front.
-			for _, msg := range messages {
-				for _, m := range c.Members {
-					if msg.Author.ID != m.User.ID {
-						continue
+			for _, m := range c.Members {
+				for _, msg := range messages {
+					if msg.Author.ID == m.User.ID {
+						ct.UpdateMessage(message.NewAuthorUpdate(msg, m, msgr.State))
 					}
-
-					ct.UpdateMessage(message.NewMessageUpdateAuthor(msg, m, *guild, msgr.State))
 				}
 			}
 		}))
-	} else {
-		constructor = func(m discord.Message) cchat.MessageCreate {
-			return message.NewDirectMessage(m, msgr.State)
-		}
 	}
 
 	// Only do all this if we even have any messages.
@@ -101,7 +71,7 @@ func (msgr *Messenger) JoinServer(ctx context.Context, ct cchat.MessagesContaine
 
 		// Iterate from the earliest messages to the latest messages.
 		for _, m := range m {
-			ct.CreateMessage(constructor(m))
+			ct.CreateMessage(message.NewBacklogMessage(m, msgr.State))
 		}
 
 		// Mark this channel as read.
@@ -119,7 +89,7 @@ func (msgr *Messenger) JoinServer(ctx context.Context, ct cchat.MessagesContaine
 		msgr.State.AddHandler(func(m *gateway.MessageUpdateEvent) {
 			// If the updated content is empty. TODO: add embed support.
 			if m.ChannelID == msgr.ID {
-				ct.UpdateMessage(message.NewMessageUpdateContent(m.Message, msgr.State))
+				ct.UpdateMessage(message.NewContentUpdate(m.Message, msgr.State))
 			}
 		}),
 		msgr.State.AddHandler(func(m *gateway.MessageDeleteEvent) {

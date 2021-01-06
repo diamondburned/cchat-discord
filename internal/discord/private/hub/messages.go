@@ -8,11 +8,11 @@ import (
 	"github.com/diamondburned/arikawa/v2/gateway"
 	"github.com/diamondburned/cchat"
 	"github.com/diamondburned/cchat-discord/internal/discord/channel/message/send/complete"
-	"github.com/diamondburned/cchat-discord/internal/discord/channel/shared"
 	"github.com/diamondburned/cchat-discord/internal/discord/message"
 	"github.com/diamondburned/cchat-discord/internal/discord/state"
 	"github.com/diamondburned/cchat-discord/internal/discord/state/nonce"
 	"github.com/diamondburned/cchat-discord/internal/funcutil"
+	"github.com/diamondburned/cchat-discord/internal/segments/mention"
 	"github.com/diamondburned/cchat/utils/empty"
 )
 
@@ -167,16 +167,14 @@ func (msgs *Messages) JoinServer(ctx context.Context, ct cchat.MessagesContainer
 				isReply = true
 			}
 
-			var author = message.NewUser(msg.Author, msgs.state)
+			user := mention.NewUser(msg.Author)
+			user.WithState(msgs.state.State)
+
+			var author = message.NewAuthor(user)
 			if isReply {
 				c, err := msgs.state.Channel(msg.ChannelID)
 				if err == nil {
-					switch c.Type {
-					case discord.DirectMessage:
-						author.AddUserReply(c.DMRecipients[0], msgs.state)
-					case discord.GroupDM:
-						author.AddReply(shared.ChannelName(*c))
-					}
+					author.AddChannelReply(*c, msgs.state)
 				}
 			}
 
@@ -188,7 +186,7 @@ func (msgs *Messages) JoinServer(ctx context.Context, ct cchat.MessagesContainer
 				return
 			}
 
-			ct.UpdateMessage(message.NewMessageUpdateContent(update.Message, msgs.state))
+			ct.UpdateMessage(message.NewContentUpdate(update.Message, msgs.state))
 		}),
 		msgs.state.AddHandler(func(del *gateway.MessageDeleteEvent) {
 			if del.GuildID.IsValid() || msgs.acList.isActive(del.ChannelID) {

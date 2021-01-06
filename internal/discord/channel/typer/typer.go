@@ -1,7 +1,6 @@
 package typer
 
 import (
-	"errors"
 	"time"
 
 	"github.com/diamondburned/arikawa/v2/discord"
@@ -9,6 +8,8 @@ import (
 	"github.com/diamondburned/cchat"
 	"github.com/diamondburned/cchat-discord/internal/discord/message"
 	"github.com/diamondburned/cchat-discord/internal/discord/state"
+	"github.com/diamondburned/cchat-discord/internal/segments/mention"
+	"github.com/pkg/errors"
 )
 
 type Typer struct {
@@ -18,48 +19,47 @@ type Typer struct {
 
 var _ cchat.Typer = (*Typer)(nil)
 
-func NewFromAuthor(author message.Author, ev *gateway.TypingStartEvent) Typer {
-	return Typer{
-		Author: author,
-		time:   ev.Timestamp,
-	}
-}
-
+// New creates a new Typer that satisfies cchat.Typer.
 func New(s *state.Instance, ev *gateway.TypingStartEvent) (*Typer, error) {
+	var user *mention.User
+
 	if ev.GuildID.IsValid() {
-		g, err := s.Cabinet.Guild(ev.GuildID)
-		if err != nil {
-			return nil, err
-		}
-
 		if ev.Member == nil {
-			ev.Member, err = s.Cabinet.Member(ev.GuildID, ev.UserID)
+			m, err := s.Cabinet.Member(ev.GuildID, ev.UserID)
 			if err != nil {
-				return nil, err
+				// There's no other way we could get the user (other than to
+				// check for presences), so we bail.
+				return nil, errors.Wrap(err, "failed to get member")
 			}
+			ev.Member = m
 		}
 
-		return &Typer{
-			Author: message.NewGuildMember(*ev.Member, *g, s),
-			time:   ev.Timestamp,
-		}, nil
-	}
+		user = mention.NewUser(ev.Member.User)
+		user.WithMember(*ev.Member)
+	} else {
+		c, err := s.Cabinet.Channel(ev.ChannelID)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to get channel")
+		}
 
-	c, err := s.Cabinet.Channel(ev.ChannelID)
-	if err != nil {
-		return nil, err
-	}
+		for _, recipient := range c.DMRecipients {
+			if recipient.ID != ev.UserID {
+				continue
+			}
 
-	for _, user := range c.DMRecipients {
-		if user.ID == ev.UserID {
-			return &Typer{
-				Author: message.NewUser(user, s),
-				time:   ev.Timestamp,
-			}, nil
+			user = mention.NewUser(recipient)
+			break
 		}
 	}
 
-	return nil, errors.New("typer not found in state")
+	user.WithGuildID(ev.GuildID)
+	user.WithState(s.State)
+	user.Prefetch()
+
+	return &Typer{
+		Author: message.NewAuthor(user),
+		time:   ev.Timestamp,
+	}, nil
 }
 
 func (t Typer) Time() time.Time {

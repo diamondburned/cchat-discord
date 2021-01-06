@@ -6,6 +6,7 @@ import (
 	"github.com/diamondburned/cchat"
 	"github.com/diamondburned/cchat-discord/internal/discord/message"
 	"github.com/diamondburned/cchat-discord/internal/discord/state"
+	"github.com/diamondburned/cchat-discord/internal/segments/mention"
 	"github.com/diamondburned/cchat-discord/internal/urlutils"
 	"github.com/diamondburned/cchat/text"
 )
@@ -40,23 +41,17 @@ func GuildMessageMentions(
 
 		authors[msg.Author.ID] = struct{}{}
 
-		var rich text.Rich
+		user := mention.NewUser(msg.Author)
+		user.WithGuildID(msg.GuildID)
 
 		if guild != nil && state != nil {
-			m, err := state.Cabinet.Member(guild.ID, msg.Author.ID)
-			if err == nil {
-				rich = message.RenderMemberName(*m, *guild, state)
-			}
-		}
-
-		// Fallback to searching the author if member fails.
-		if rich.IsEmpty() {
-			rich = text.Plain(msg.Author.Username)
+			user.WithState(state.State)
+			user.WithGuild(*guild)
 		}
 
 		entries = append(entries, cchat.CompletionEntry{
 			Raw:       msg.Author.Mention(),
-			Text:      rich,
+			Text:      message.RenderAuthorName(user),
 			Secondary: text.Plain(msg.Author.Username + "#" + msg.Author.Discriminator),
 			IconURL:   msg.Author.AvatarURL(),
 		})
@@ -101,7 +96,7 @@ func AllUsers(s *state.Instance, word string) []cchat.CompletionEntry {
 		raw := r.User.Mention()
 
 		var status = gateway.UnknownStatus
-		if p, _ := s.PresenceState.Presence(0, r.UserID); p != nil {
+		if p, _ := s.PresenceStore.Presence(0, r.UserID); p != nil {
 			status = p.Status
 		}
 
@@ -123,7 +118,7 @@ func AllUsers(s *state.Instance, word string) []cchat.CompletionEntry {
 	}
 
 	// Search for presences.
-	s.PresenceState.Each(0, func(p *gateway.Presence) bool {
+	s.PresenceStore.Each(0, func(p *gateway.Presence) bool {
 		// Avoid duplicates.
 		if _, ok := friends[p.User.ID]; ok {
 			return false
@@ -237,45 +232,35 @@ func (ch ChannelCompleter) CompleteMentions(word string) []cchat.CompletionEntry
 		return entries
 	}
 
-	// If we're in a guild, then we should search for (all) members.
-	m, merr := ch.State.Cabinet.Members(ch.GuildID)
-	g, gerr := ch.State.Cabinet.Guild(ch.GuildID)
-
-	if merr != nil || gerr != nil {
-		return nil
-	}
-
-	// If we couldn't find any members, then we can request Discord to
-	// search for them.
-	if len(m) == 0 {
-		ch.State.MemberState.SearchMember(ch.GuildID, word)
-		return nil
-	}
-
-	for _, mem := range m {
-		rank := memberMatchString(word, &mem)
+	// Prioritize searching the guild's presences because we don't need to copy
+	// slices.
+	ch.State.MemberStore.Each(ch.GuildID, func(m *discord.Member) (stop bool) {
+		rank := memberMatchString(word, m)
 		if rank == -1 {
-			continue
+			return false
 		}
 
 		ensureEntriesMade(&entries)
 		ensureDistancesMade(&distances)
 
-		raw := mem.User.Mention()
+		user := mention.NewUser(m.User)
+		user.WithGuildID(ch.GuildID)
+		user.WithMember(*m)
+		user.WithState(ch.State.State)
+
+		raw := m.User.Mention()
 
 		entries = append(entries, cchat.CompletionEntry{
 			Raw:       raw,
-			Text:      message.RenderMemberName(mem, *g, ch.State),
-			Secondary: text.Plain(mem.User.Username + "#" + mem.User.Discriminator),
-			IconURL:   urlutils.AvatarURL(mem.User.AvatarURL()),
+			Text:      message.RenderAuthorName(user),
+			Secondary: text.Plain(m.User.Username + "#" + m.User.Discriminator),
+			IconURL:   user.Avatar(),
 		})
 
 		distances[raw] = rank
 
-		if len(entries) >= MaxCompletion {
-			break
-		}
-	}
+		return len(entries) >= MaxCompletion
+	})
 
 	sortDistances(entries, distances)
 	return entries

@@ -28,7 +28,11 @@ func mention(r *renderer.Text, node ast.Node, enter bool) ast.WalkStatus {
 			seg.Start, seg.End = r.WriteString("@" + n.GuildUser.Username)
 			seg.User = NewUser(n.GuildUser.User)
 			seg.User.store = r.Store
-			seg.User.SetMember(r.Message.GuildID, n.GuildUser.Member)
+			seg.User.WithGuildID(r.Message.GuildID)
+			if n.GuildUser.Member != nil {
+				seg.User.WithMember(*n.GuildUser.Member)
+			}
+			seg.User.Prefetch()
 
 		case n.GuildRole != nil:
 			seg.Start, seg.End = r.WriteString("@" + n.GuildRole.Name)

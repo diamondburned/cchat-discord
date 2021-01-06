@@ -31,17 +31,11 @@ func (bl Backlogger) Backlog(ctx context.Context, b cchat.ID, c cchat.MessagesCo
 		return errors.Wrap(err, "Failed to get messages")
 	}
 
-	// Create the backlog without any member information.
-	g, err := s.Guild(bl.GuildID)
-	if err != nil {
-		return errors.Wrap(err, "Failed to get guild")
-	}
-
 	for _, m := range m {
 		// Discord sucks.
 		m.GuildID = bl.GuildID
 
-		c.CreateMessage(message.NewBacklogMessage(m, bl.State, *g))
+		c.CreateMessage(message.NewBacklogMessage(m, bl.State))
 	}
 
 	return nil

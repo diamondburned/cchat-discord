@@ -82,37 +82,6 @@ var (
 	_ cchat.Noncer        = (*Message)(nil)
 )
 
-func NewMessageUpdateContent(msg discord.Message, s *state.Instance) Message {
-	// Check if content is empty.
-	if msg.Content == "" {
-		// Then grab the content from the state.
-		m, err := s.Cabinet.Message(msg.ChannelID, msg.ID)
-		if err == nil {
-			msg.Content = m.Content
-		}
-	}
-
-	var content = segments.ParseMessage(&msg, s.Cabinet)
-	return Message{
-		messageHeader: newHeader(msg),
-		content:       content,
-	}
-}
-
-func NewMessageUpdateAuthor(
-	msg discord.Message, member discord.Member, g discord.Guild, s *state.Instance) Message {
-
-	author := NewGuildMember(member, g, s)
-	if ref := ReferencedMessage(msg, s, true); ref != nil {
-		author.AddMessageReference(*ref, s)
-	}
-
-	return Message{
-		messageHeader: newHeader(msg),
-		author:        NewGuildMember(member, g, s),
-	}
-}
-
 // NewGuildMessageCreate uses the session to create a message. It does not do
 // API calls. Member is optional. This is the only call that populates the Nonce
 // in the header.
@@ -121,51 +90,98 @@ func NewGuildMessageCreate(c *gateway.MessageCreateEvent, s *state.Instance) Mes
 	message := c.Message
 	message.Nonce = s.Nonces.Load(c.Nonce)
 
-	// This should not error.
-	g, err := s.Cabinet.Guild(c.GuildID)
-	if err != nil {
-		return NewMessage(message, s, NewUser(c.Author, s))
+	user := mention.NewUser(c.Author)
+	user.WithState(s.State)
+	user.WithGuildID(c.GuildID)
+
+	if c.Member != nil {
+		user.WithMember(*c.Member)
 	}
 
-	if c.Member == nil {
-		c.Member, _ = s.Cabinet.Member(c.GuildID, c.Author.ID)
-	}
-	if c.Member == nil {
-		s.MemberState.RequestMember(c.GuildID, c.Author.ID)
-		return NewMessage(message, s, NewUser(c.Author, s))
-	}
+	user.Prefetch()
 
-	return NewMessage(message, s, NewGuildMember(*c.Member, *g, s))
+	return NewMessage(message, s, NewAuthor(user))
 }
 
 // NewBacklogMessage uses the session to create a message fetched from the
 // backlog. It takes in an existing guild and tries to fetch a new member, if
 // it's nil.
-func NewBacklogMessage(m discord.Message, s *state.Instance, g discord.Guild) Message {
+func NewBacklogMessage(m discord.Message, s *state.Instance) Message {
 	// If the message doesn't have a guild, then we don't need all the
 	// complicated member fetching process.
 	if !m.GuildID.IsValid() {
-		return NewMessage(m, s, NewUser(m.Author, s))
+		return NewDirectMessage(m, s)
 	}
 
-	mem, err := s.Cabinet.Member(m.GuildID, m.Author.ID)
-	if err != nil {
-		s.MemberState.RequestMember(m.GuildID, m.Author.ID)
-		return NewMessage(m, s, NewUser(m.Author, s))
-	}
+	user := mention.NewUser(m.Author)
+	user.WithGuildID(m.GuildID)
+	user.WithState(s.State)
+	user.Prefetch()
 
-	return NewMessage(m, s, NewGuildMember(*mem, g, s))
+	return NewMessage(m, s, NewAuthor(user))
 }
 
+// NewDirectMessage creates a new direct message.
 func NewDirectMessage(m discord.Message, s *state.Instance) Message {
-	return NewMessage(m, s, NewUser(m.Author, s))
+	user := mention.NewUser(m.Author)
+	user.WithState(s.State)
+	user.Prefetch()
+
+	return NewMessage(m, s, NewAuthor(user))
 }
 
-func NewMessage(m discord.Message, s *state.Instance, author Author) Message {
-	// Ensure the validity of ReferencedMessage.
-	m.ReferencedMessage = ReferencedMessage(m, s, true)
+// NewAuthorUpdate creates a new message that contains a new author.
+func NewAuthorUpdate(msg discord.Message, m discord.Member, s *state.Instance) Message {
+	user := mention.NewUser(msg.Author)
+	user.WithState(s.State)
+	user.WithGuildID(msg.GuildID)
+	user.WithMember(m)
 
-	// Render the message content.
+	author := NewAuthor(user)
+	if ref := ReferencedMessage(msg, s, true); ref != nil {
+		author.AddMessageReference(*ref, s)
+	}
+
+	return Message{
+		messageHeader: newHeader(msg),
+		author:        author,
+	}
+}
+
+// NewContentUpdate creates a new message that does not have an author. It
+// should be used for UpdateMessage only.
+func NewContentUpdate(msg discord.Message, s *state.Instance) Message {
+	// Check if content is empty.
+	if msg.Content == "" {
+		// Then grab the content from the state.
+		m, err := s.Cabinet.Message(msg.ChannelID, msg.ID)
+		if err == nil {
+			msg = *m
+		}
+	}
+
+	return newMessageContent(&msg, s)
+}
+
+// NewMessage creates a new message from the given author. It may modify author
+// to add a message reference.
+func NewMessage(m discord.Message, s *state.Instance, author Author) Message {
+	message := newMessageContent(&m, s)
+	message.author = author
+
+	if m.ReferencedMessage != nil {
+		message.author.AddMessageReference(*m.ReferencedMessage, s)
+	}
+
+	return message
+}
+
+// newMessageContent creates a new message with a content only. The given
+// message will have its ReferencedMessage field validated and filled if
+// available.
+func newMessageContent(m *discord.Message, s *state.Instance) Message {
+	// Ensure the validity of ReferencedMessage.
+	m.ReferencedMessage = ReferencedMessage(*m, s, true)
 
 	var content text.Rich
 
@@ -188,6 +204,7 @@ func NewMessage(m discord.Message, s *state.Instance, author Author) Message {
 
 	case discord.ChannelIconChangeMessage:
 		content.Content = "Changed the channel icon."
+
 	case discord.ChannelNameChangeMessage:
 		writeSegmented(&content, "Changed the channel name to ", m.Content, ".",
 			func(i, j int) text.Segment {
@@ -205,14 +222,9 @@ func NewMessage(m discord.Message, s *state.Instance, author Author) Message {
 			break
 		}
 
-		writeSegmented(&content, "Added ", m.Mentions[0].Username, " to the group.",
-			func(i, j int) text.Segment {
-				user := mention.NewUser(m.Mentions[0].User)
-				user.SetMember(m.GuildID, m.Mentions[0].Member)
-				segment := mention.NewSegment(i, j, user)
-				segment.WithState(s.State)
-				return segment
-			},
+		writeSegmented(&content,
+			"Added ", m.Mentions[0].Username, " to the group.",
+			segmentFuncFromMention(*m, s),
 		)
 
 	case discord.RecipientRemoveMessage:
@@ -221,14 +233,9 @@ func NewMessage(m discord.Message, s *state.Instance, author Author) Message {
 			break
 		}
 
-		writeSegmented(&content, "Removed ", m.Mentions[0].Username, " from the group.",
-			func(i, j int) text.Segment {
-				user := mention.NewUser(m.Mentions[0].User)
-				user.SetMember(m.GuildID, m.Mentions[0].Member)
-				segment := mention.NewSegment(i, j, user)
-				segment.WithState(s.State)
-				return segment
-			},
+		writeSegmented(&content,
+			"Removed ", m.Mentions[0].Username, " from the group.",
+			segmentFuncFromMention(*m, s),
 		)
 
 	case discord.NitroBoostMessage:
@@ -241,15 +248,15 @@ func NewMessage(m discord.Message, s *state.Instance, author Author) Message {
 		content.Content = "The server is now Nitro Boosted to Tier 3."
 
 	case discord.ChannelFollowAddMessage:
-		log.Printf("[Discord] Unknown message type: %#v\n")
+		log.Printf("[Discord] Unknown message type: %#v\n", m)
 		content.Content = "Type = discord.ChannelFollowAddMessage"
 
 	case discord.GuildDiscoveryDisqualifiedMessage:
-		log.Printf("[Discord] Unknown message type: %#v\n")
+		log.Printf("[Discord] Unknown message type: %#v\n", m)
 		content.Content = "Type = discord.GuildDiscoveryDisqualifiedMessage"
 
 	case discord.GuildDiscoveryRequalifiedMessage:
-		log.Printf("[Discord] Unknown message type: %#v\n")
+		log.Printf("[Discord] Unknown message type: %#v\n", m)
 		content.Content = "Type = discord.GuildDiscoveryRequalifiedMessage"
 
 	case discord.ApplicationCommandMessage:
@@ -259,7 +266,7 @@ func NewMessage(m discord.Message, s *state.Instance, author Author) Message {
 	case discord.DefaultMessage:
 		fallthrough
 	default:
-		return newMessage(m, s, author)
+		return newRegularContent(*m, s)
 	}
 
 	segutil.Add(&content, inline.NewSegment(
@@ -268,52 +275,36 @@ func NewMessage(m discord.Message, s *state.Instance, author Author) Message {
 	))
 
 	return Message{
-		messageHeader: newHeaderNonce(m, m.Nonce),
-		author:        author,
+		messageHeader: newHeaderNonce(*m, m.Nonce),
 		content:       content,
 	}
 }
 
-func newMessage(m discord.Message, s *state.Instance, author Author) Message {
+func newRegularContent(m discord.Message, s *state.Instance) Message {
 	var content text.Rich
 
 	if m.ReferencedMessage != nil {
-		segments.ParseWithMessageRich(&content, []byte(m.ReferencedMessage.Content), &m, s.Cabinet)
+		refContent := []byte(m.ReferencedMessage.Content)
+		segments.ParseWithMessageRich(&content, refContent, &m, s.Cabinet)
+
 		content = segments.Ellipsize(content, 100)
 		content.Content += "\n"
 
 		segutil.Add(&content,
 			reference.NewMessageSegment(0, len(content.Content)-1, m.ReferencedMessage.ID),
 		)
-
-		author.AddMessageReference(*m.ReferencedMessage, s)
 	}
 
 	segments.ParseMessageRich(&content, &m, s.Cabinet)
 
 	return Message{
 		messageHeader: newHeaderNonce(m, m.Nonce),
-		author:        author,
 		content:       content,
 	}
 }
 
-func writeSegmented(rich *text.Rich, start, mid, end string, f func(i, j int) text.Segment) {
-	var builder strings.Builder
-
-	builder.WriteString(start)
-	i, j := segutil.WriteStringBuilder(&builder, start)
-	builder.WriteString(end)
-
-	rich.Content = builder.String()
-
-	if seg := f(i, j); seg != nil {
-		rich.Segments = append(rich.Segments, f(i, j))
-	}
-}
-
 func (m Message) Author() cchat.Author {
-	if !m.author.id.IsValid() {
+	if m.author.user == nil {
 		return nil
 	}
 	return m.author
@@ -360,4 +351,43 @@ func ReferencedMessage(m discord.Message, s *state.Instance, wait bool) (reply *
 	}
 
 	return
+}
+
+// segmentFuncFromMention returns a function that gets the message's first
+// mention and returns a segment created from it. It returns nil if the message
+// does not have any mentions.
+func segmentFuncFromMention(m discord.Message, s *state.Instance) func(i, j int) text.Segment {
+	return func(i, j int) text.Segment {
+		if len(m.Mentions) == 0 {
+			return nil
+		}
+
+		firstMention := m.Mentions[0]
+
+		user := mention.NewUser(firstMention.User)
+		user.WithGuildID(m.GuildID)
+		user.WithState(s.State)
+
+		if firstMention.Member != nil {
+			user.WithMember(*firstMention.Member)
+		}
+
+		user.Prefetch()
+
+		return mention.NewSegment(i, j, user)
+	}
+}
+
+func writeSegmented(rich *text.Rich, start, mid, end string, f func(i, j int) text.Segment) {
+	var builder strings.Builder
+
+	builder.WriteString(start)
+	i, j := segutil.WriteStringBuilder(&builder, start)
+	builder.WriteString(end)
+
+	rich.Content = builder.String()
+
+	if seg := f(i, j); seg != nil {
+		rich.Segments = append(rich.Segments, f(i, j))
+	}
 }
