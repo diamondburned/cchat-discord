@@ -2,6 +2,7 @@ package segutil
 
 import (
 	"bytes"
+	"strings"
 
 	"github.com/diamondburned/cchat/text"
 )
@@ -23,6 +24,13 @@ func WriteBuf(w *bytes.Buffer, b []byte) (start, end int) {
 }
 
 func WriteStringBuf(w *bytes.Buffer, b string) (start, end int) {
+	start = w.Len()
+	w.WriteString(b)
+	end = w.Len()
+	return start, end
+}
+
+func WriteStringBuilder(w *strings.Builder, b string) (start, end int) {
 	start = w.Len()
 	w.WriteString(b)
 	end = w.Len()

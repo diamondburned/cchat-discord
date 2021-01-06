@@ -1,6 +1,7 @@
 package message
 
 import (
+	"log"
 	"strings"
 	"time"
 
@@ -9,8 +10,10 @@ import (
 	"github.com/diamondburned/cchat"
 	"github.com/diamondburned/cchat-discord/internal/discord/state"
 	"github.com/diamondburned/cchat-discord/internal/segments"
+	"github.com/diamondburned/cchat-discord/internal/segments/inline"
 	"github.com/diamondburned/cchat-discord/internal/segments/mention"
 	"github.com/diamondburned/cchat-discord/internal/segments/reference"
+	"github.com/diamondburned/cchat-discord/internal/segments/segutil"
 	"github.com/diamondburned/cchat/text"
 )
 
@@ -159,50 +162,153 @@ func NewDirectMessage(m discord.Message, s *state.Instance) Message {
 }
 
 func NewMessage(m discord.Message, s *state.Instance, author Author) Message {
-	var content text.Rich
-
-	if ref := ReferencedMessage(m, s, true); ref != nil {
-		// TODO: markup support
-		var refmsg = "> " + ref.Content
-		if len(refmsg) > 120 {
-			refmsg = refmsg[:120] + "..."
-		}
-
-		content.Content = strings.ReplaceAll(refmsg, "\n", "  ") + "\n"
-		content.Segments = []text.Segment{
-			reference.NewMessageSegment(0, len(content.Content), ref.ID),
-		}
-
-		author.AddMessageReference(*ref, s)
-	}
+	// Ensure the validity of ReferencedMessage.
+	m.ReferencedMessage = ReferencedMessage(m, s, true)
 
 	// Render the message content.
-	segments.ParseMessageRich(&content, &m, s.Cabinet)
 
-	// Request members in mentions if we're in a guild.
-	if m.GuildID.IsValid() {
-		for _, segment := range content.Segments {
-			mention, ok := segment.(*mention.Segment)
-			if !ok {
-				continue
-			}
+	var content text.Rich
 
-			// If this is not a user mention, then skip. If we already have a
-			// member, then skip. We could check this using the timestamp, as we
-			// might have a user set into the member field.
-			if mention.User == nil || mention.User.Member.Joined.IsValid() {
-				continue
-			}
+	switch m.Type {
+	case discord.ChannelPinnedMessage:
+		writeSegmented(&content, "Pinned ", "a message", " to this channel.",
+			func(i, j int) text.Segment {
+				if m.ReferencedMessage == nil {
+					return nil
+				}
+				return reference.NewMessageSegment(i, j, m.ReferencedMessage.ID)
+			},
+		)
 
-			// Request the member.
-			s.MemberState.RequestMember(m.GuildID, mention.User.Member.User.ID)
+	case discord.GuildMemberJoinMessage:
+		content.Content = "Joined the server."
+
+	case discord.CallMessage:
+		content.Content = "Calling you."
+
+	case discord.ChannelIconChangeMessage:
+		content.Content = "Changed the channel icon."
+	case discord.ChannelNameChangeMessage:
+		writeSegmented(&content, "Changed the channel name to ", m.Content, ".",
+			func(i, j int) text.Segment {
+				return mention.Segment{
+					Start:   i,
+					End:     j,
+					Channel: mention.NewChannelFromID(s.State, m.ChannelID),
+				}
+			},
+		)
+
+	case discord.RecipientAddMessage:
+		if len(m.Mentions) == 0 {
+			content.Content = "Added recipient to the group."
+			break
 		}
+
+		writeSegmented(&content, "Added ", m.Mentions[0].Username, " to the group.",
+			func(i, j int) text.Segment {
+				user := mention.NewUser(m.Mentions[0].User)
+				user.SetMember(m.GuildID, m.Mentions[0].Member)
+				segment := mention.NewSegment(i, j, user)
+				segment.WithState(s.State)
+				return segment
+			},
+		)
+
+	case discord.RecipientRemoveMessage:
+		if len(m.Mentions) == 0 {
+			content.Content = "Removed recipient from the group."
+			break
+		}
+
+		writeSegmented(&content, "Removed ", m.Mentions[0].Username, " from the group.",
+			func(i, j int) text.Segment {
+				user := mention.NewUser(m.Mentions[0].User)
+				user.SetMember(m.GuildID, m.Mentions[0].Member)
+				segment := mention.NewSegment(i, j, user)
+				segment.WithState(s.State)
+				return segment
+			},
+		)
+
+	case discord.NitroBoostMessage:
+		content.Content = "Boosted the server."
+	case discord.NitroTier1Message:
+		content.Content = "The server is now Nitro Boosted to Tier 1."
+	case discord.NitroTier2Message:
+		content.Content = "The server is now Nitro Boosted to Tier 2."
+	case discord.NitroTier3Message:
+		content.Content = "The server is now Nitro Boosted to Tier 3."
+
+	case discord.ChannelFollowAddMessage:
+		log.Printf("[Discord] Unknown message type: %#v\n")
+		content.Content = "Type = discord.ChannelFollowAddMessage"
+
+	case discord.GuildDiscoveryDisqualifiedMessage:
+		log.Printf("[Discord] Unknown message type: %#v\n")
+		content.Content = "Type = discord.GuildDiscoveryDisqualifiedMessage"
+
+	case discord.GuildDiscoveryRequalifiedMessage:
+		log.Printf("[Discord] Unknown message type: %#v\n")
+		content.Content = "Type = discord.GuildDiscoveryRequalifiedMessage"
+
+	case discord.ApplicationCommandMessage:
+		fallthrough
+	case discord.InlinedReplyMessage:
+		fallthrough
+	case discord.DefaultMessage:
+		fallthrough
+	default:
+		return newMessage(m, s, author)
 	}
+
+	segutil.Add(&content, inline.NewSegment(
+		0, len(content.Content),
+		text.AttributeDimmed|text.AttributeItalics,
+	))
 
 	return Message{
 		messageHeader: newHeaderNonce(m, m.Nonce),
 		author:        author,
 		content:       content,
+	}
+}
+
+func newMessage(m discord.Message, s *state.Instance, author Author) Message {
+	var content text.Rich
+
+	if m.ReferencedMessage != nil {
+		segments.ParseWithMessageRich(&content, []byte(m.ReferencedMessage.Content), &m, s.Cabinet)
+		content = segments.Ellipsize(content, 100)
+		content.Content += "\n"
+
+		segutil.Add(&content,
+			reference.NewMessageSegment(0, len(content.Content)-1, m.ReferencedMessage.ID),
+		)
+
+		author.AddMessageReference(*m.ReferencedMessage, s)
+	}
+
+	segments.ParseMessageRich(&content, &m, s.Cabinet)
+
+	return Message{
+		messageHeader: newHeaderNonce(m, m.Nonce),
+		author:        author,
+		content:       content,
+	}
+}
+
+func writeSegmented(rich *text.Rich, start, mid, end string, f func(i, j int) text.Segment) {
+	var builder strings.Builder
+
+	builder.WriteString(start)
+	i, j := segutil.WriteStringBuilder(&builder, start)
+	builder.WriteString(end)
+
+	rich.Content = builder.String()
+
+	if seg := f(i, j); seg != nil {
+		rich.Segments = append(rich.Segments, f(i, j))
 	}
 }
 

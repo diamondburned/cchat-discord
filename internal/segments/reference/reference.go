@@ -3,6 +3,7 @@ package reference
 import (
 	"github.com/diamondburned/arikawa/v2/discord"
 	"github.com/diamondburned/cchat"
+	"github.com/diamondburned/cchat-discord/internal/segments/segutil"
 	"github.com/diamondburned/cchat/text"
 	"github.com/diamondburned/cchat/utils/empty"
 )
@@ -22,6 +23,13 @@ type MessageSegment struct {
 }
 
 var _ text.Segment = (*MessageSegment)(nil)
+
+// Write appends to the given rich text the reference to the message ID with the
+// given text.
+func Write(rich *text.Rich, msgID discord.MessageID, text string) {
+	start, end := segutil.Write(rich, text)
+	segutil.Add(rich, NewMessageSegment(start, end, msgID))
+}
 
 func NewMessageSegment(start, end int, msgID discord.MessageID) MessageSegment {
 	return MessageSegment{

@@ -9,83 +9,55 @@ import (
 	"github.com/diamondburned/arikawa/v2/gateway"
 	"github.com/diamondburned/cchat"
 	"github.com/diamondburned/cchat-discord/internal/discord/channel/shared"
-	"github.com/diamondburned/cchat-discord/internal/segments/colored"
 	"github.com/diamondburned/cchat-discord/internal/segments/emoji"
 	"github.com/diamondburned/cchat-discord/internal/segments/mention"
-	"github.com/diamondburned/cchat-discord/internal/urlutils"
 	"github.com/diamondburned/cchat/text"
 )
 
 type Member struct {
 	channel  shared.Channel
-	userID   discord.UserID
-	origName string // use if cache is stale
+	mention  mention.User
+	presence gateway.Presence
 }
 
 // New creates a new list member. it.Member must not be nil.
 func NewMember(ch shared.Channel, opItem gateway.GuildMemberListOpItem) cchat.ListMember {
+	user := mention.NewUser(opItem.Member.User)
+	user.WithState(ch.State.State)
+	user.SetMember(ch.GuildID, &opItem.Member.Member)
+	user.SetPresence(opItem.Member.Presence)
+
 	return &Member{
 		channel:  ch,
-		userID:   opItem.Member.User.ID,
-		origName: opItem.Member.User.Username,
+		presence: opItem.Member.Presence,
+		mention:  *user,
 	}
 }
 
 func (l *Member) ID() cchat.ID {
-	return l.userID.String()
+	return l.mention.UserID().String()
 }
 
 func (l *Member) Name() text.Rich {
-	g, err := l.channel.State.Cabinet.Guild(l.channel.GuildID)
-	if err != nil {
-		return text.Plain(l.origName)
+	content := l.mention.DisplayName()
+
+	return text.Rich{
+		Content: content,
+		Segments: []text.Segment{
+			mention.NewSegment(0, len(content), &l.mention),
+		},
 	}
-
-	m, err := l.channel.State.Cabinet.Member(l.channel.GuildID, l.userID)
-	if err != nil {
-		return text.Plain(l.origName)
-	}
-
-	var name = m.User.Username
-	if m.Nick != "" {
-		name = m.Nick
-	}
-
-	mention := mention.MemberSegment(0, len(name), *g, *m)
-	mention.WithState(l.channel.State.State)
-
-	var txt = text.Rich{
-		Content:  name,
-		Segments: []text.Segment{mention},
-	}
-
-	if c := discord.MemberColor(*g, *m); c != discord.DefaultMemberColor {
-		txt.Segments = append(txt.Segments, colored.New(len(name), uint32(c)))
-	}
-
-	return txt
 }
 
 func (l *Member) AsIconer() cchat.Iconer { return l }
 
 func (l *Member) Icon(ctx context.Context, c cchat.IconContainer) (func(), error) {
-	m, err := l.channel.State.Member(l.channel.GuildID, l.userID)
-	if err != nil {
-		return nil, err
-	}
-
-	c.SetIcon(urlutils.AvatarURL(m.User.AvatarURL()))
-
+	c.SetIcon(l.mention.Avatar())
 	return func() {}, nil
 }
 
 func (l *Member) Status() cchat.Status {
-	p, err := l.channel.State.Cabinet.Presence(l.channel.GuildID, l.userID)
-	if err != nil {
-		return cchat.StatusUnknown
-	}
-
-	switch p.Status {
+	switch l.presence.Status {
 	case gateway.OnlineStatus:
 		return cchat.StatusOnline
 	case gateway.DoNotDisturbStatus:
@@ -100,16 +72,11 @@ func (l *Member) Status() cchat.Status {
 }
 
 func (l *Member) Secondary() text.Rich {
-	p, err := l.channel.State.Cabinet.Presence(l.channel.GuildID, l.userID)
-	if err != nil {
-		return text.Plain("")
+	if len(l.presence.Activities) == 0 {
+		return text.Rich{}
 	}
 
-	if len(p.Activities) > 0 {
-		return formatSmallActivity(p.Activities[0])
-	}
-
-	return text.Plain("")
+	return formatSmallActivity(l.presence.Activities[0])
 }
 
 func formatSmallActivity(ac discord.Activity) text.Rich {

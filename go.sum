@@ -66,6 +66,8 @@ github.com/diamondburned/arikawa/v2 v2.0.0-20201227001310-f3f075b27f44/go.mod h1
 github.com/diamondburned/arikawa/v2 v2.0.0-20210101074829-c6d8c741e883/go.mod h1:e+lhS20ni2luFEU06Pc8paCxgZL99/RZb77dOC82CF0=
 github.com/diamondburned/arikawa/v2 v2.0.0-20210101083335-169b36126239 h1:ogL6/TJJecNYkvREJa+nHZ326b+QjHN/eLXMUtiyz/A=
 github.com/diamondburned/arikawa/v2 v2.0.0-20210101083335-169b36126239/go.mod h1:e+lhS20ni2luFEU06Pc8paCxgZL99/RZb77dOC82CF0=
+github.com/diamondburned/arikawa/v2 v2.0.0-20210105213913-8a213759164c h1:6n1EqFEPZbtm0pj8vtS7VzZuWvg7v04UL9hAcpK3lNk=
+github.com/diamondburned/arikawa/v2 v2.0.0-20210105213913-8a213759164c/go.mod h1:e+lhS20ni2luFEU06Pc8paCxgZL99/RZb77dOC82CF0=
 github.com/diamondburned/cchat v0.0.34 h1:BGiVxMRA9dmW3rLilIldBvjVan7eTTpaWCCfX9IKBYU=
 github.com/diamondburned/cchat v0.0.34/go.mod h1:+zXktogE45A0om4fT6B/z6Ii7FXNafjxsNspI0rlhbU=
 github.com/diamondburned/cchat v0.0.35 h1:WiMGl8BQJgbP9E4xRxgLGlqUsHpTcJgDKDt8/6a7lBk=

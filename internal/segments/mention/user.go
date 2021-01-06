@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/diamondburned/arikawa/v2/discord"
+	"github.com/diamondburned/arikawa/v2/gateway"
 	"github.com/diamondburned/arikawa/v2/state/store"
 	"github.com/diamondburned/cchat-discord/internal/segments/colored"
 	"github.com/diamondburned/cchat-discord/internal/segments/inline"
@@ -15,7 +16,7 @@ import (
 	"github.com/diamondburned/ningen/v2"
 )
 
-// NameSegment represents a clickable member name; it does not implement colors.
+// NameSegment represents a clickable member name.
 type NameSegment struct {
 	empty.TextSegment
 	start int
@@ -25,26 +26,11 @@ type NameSegment struct {
 
 var _ text.Segment = (*NameSegment)(nil)
 
-func UserSegment(start, end int, u discord.User) NameSegment {
+func NewSegment(start, end int, user *User) NameSegment {
 	return NameSegment{
 		start: start,
 		end:   end,
-		um: User{
-			store:  store.NoopCabinet,
-			Member: discord.Member{User: u},
-		},
-	}
-}
-
-func MemberSegment(start, end int, guild discord.Guild, m discord.Member) NameSegment {
-	return NameSegment{
-		start: start,
-		end:   end,
-		um: User{
-			store:  store.NoopCabinet,
-			Guild:  guild,
-			Member: m,
-		},
+		um:    *user,
 	}
 }
 
@@ -70,11 +56,17 @@ func (m NameSegment) AsColorer() text.Colorer {
 }
 
 type User struct {
-	ningen *ningen.State
-	store  store.Cabinet
+	user    discord.User
+	guildID discord.GuildID
 
-	Guild  discord.Guild
-	Member discord.Member
+	store  store.Cabinet
+	ningen *ningen.State
+
+	// optional prefetching
+
+	guild    *discord.Guild
+	member   *discord.Member
+	presence *gateway.Presence
 
 	color        uint32
 	hasColor     bool
@@ -88,34 +80,59 @@ var (
 )
 
 // NewUser creates a new user mention.
-func NewUser(store store.Cabinet, guild discord.GuildID, guser discord.GuildUser) *User {
-	if guser.Member == nil {
-		m, err := store.Member(guild, guser.ID)
-		if err != nil {
-			guser.Member = &discord.Member{}
-		} else {
-			guser.Member = m
-		}
-	}
-
-	guser.Member.User = guser.User
-
-	// Get the guild for the role slice. If not, then too bad.
-	g, err := store.Guild(guild)
-	if err != nil {
-		g = &discord.Guild{}
-	}
-
+func NewUser(u discord.User) *User {
 	return &User{
-		store:  store,
-		Guild:  *g,
-		Member: *guser.Member,
+		user:  u,
+		store: store.NoopCabinet,
 	}
 }
 
+// User returns the internal user.
+func (um *User) User() discord.User {
+	return um.user
+}
+
+// UserID returns the user ID.
+func (um *User) UserID() discord.UserID {
+	return um.user.ID
+}
+
+// SetGuildID sets the user's guild ID.
+func (um *User) SetGuildID(guildID discord.GuildID) {
+	um.guildID = guildID
+	um.HasColor() // prefetch
+}
+
+// SetMember sets the internal member to reduce roundtrips or cache hits. m can
+// be nil.
+func (um *User) SetMember(gID discord.GuildID, m *discord.Member) {
+	um.guildID = gID
+	um.member = m
+	um.HasColor()
+}
+
+// SetPresence sets the internal presence to reduce roundtrips or cache hits.
+func (um *User) SetPresence(p gateway.Presence) {
+	um.presence = &p
+}
+
+// WithState sets the internal state for usage.
 func (um *User) WithState(state *ningen.State) {
 	um.ningen = state
 	um.store = state.Cabinet
+	um.HasColor() // prefetch
+}
+
+// DisplayName returns either the nickname or the username.
+func (um *User) DisplayName() string {
+	if um.guildID.IsValid() {
+		m, err := um.store.Member(um.guildID, um.user.ID)
+		if err == nil && m.Nick != "" {
+			return m.Nick
+		}
+	}
+
+	return um.user.Username
 }
 
 // HasColor returns true if the current user has a color.
@@ -125,19 +142,22 @@ func (um *User) HasColor() bool {
 	}
 
 	// We don't have any member color if we have neither the member nor guild.
-	if !um.Guild.ID.IsValid() || !um.Member.User.ID.IsValid() {
+	if !um.guildID.IsValid() || !um.user.ID.IsValid() {
 		um.fetchedColor = true
 		return false
 	}
 
-	g, err := um.store.Guild(um.Guild.ID)
-	if err != nil {
-		um.fetchedColor = true
+	// We do have a valid GuildID, but the store might be a Noop, so we
+	// shouldn't mark it as fetched.
+	guild := um.getGuild()
+	member := um.getMember()
+
+	if guild == nil || member == nil {
 		return false
 	}
 
 	um.fetchedColor = true
-	um.color, um.hasColor = MemberColor(*g, um.Member)
+	um.color, um.hasColor = MemberColor(*guild, *member)
 
 	return um.hasColor
 }
@@ -155,84 +175,137 @@ func (um *User) AvatarSize() int {
 }
 
 func (um *User) AvatarText() string {
-	if um.Member.Nick != "" {
-		return um.Member.Nick
-	}
-	return um.Member.User.Username
+	return um.DisplayName()
 }
 
 func (um *User) Avatar() (url string) {
-	return urlutils.AvatarURL(um.Member.User.AvatarURL())
+	return urlutils.AvatarURL(um.user.AvatarURL())
 }
 
 func (um *User) MentionInfo() text.Rich {
 	var content bytes.Buffer
 	var segment text.Rich
 
-	// Write the username if the user has a nickname.
-	if um.Member.Nick != "" {
-		content.WriteString("Username: ")
-		content.WriteString(um.Member.User.Username)
-		content.WriteByte('#')
-		content.WriteString(um.Member.User.Discriminator)
-		content.WriteString("\n\n")
-	}
+	content.WriteString("Username: ")
+	content.WriteString(um.user.Username)
+	content.WriteByte('#')
+	content.WriteString(um.user.Discriminator)
+	content.WriteString("\n\n")
 
 	// Write extra information if any, but only if we have the guild state.
-	if len(um.Member.RoleIDs) > 0 && um.Guild.ID.IsValid() {
-		// Write a prepended new line, as role writes will always prepend a new
-		// line. This is to prevent a trailing new line.
-		formatSectionf(&segment, &content, "Roles")
+	if um.guildID.IsValid() {
+		guild := um.getGuild()
+		member := um.getMember()
 
-		for _, id := range um.Member.RoleIDs {
-			rl, ok := findRole(um.Guild.Roles, id)
-			if !ok {
-				continue
+		if guild != nil && member != nil {
+			// Write a prepended new line, as role writes will always prepend a
+			// new line. This is to prevent a trailing new line.
+			formatSectionf(&segment, &content, "Roles")
+
+			for _, id := range member.RoleIDs {
+				rl, ok := findRole(guild.Roles, id)
+				if !ok {
+					continue
+				}
+
+				// Prepend a new line before each item.
+				content.WriteByte('\n')
+				// Write exactly the role name, then grab the segment and color
+				// it.
+				start, end := segutil.WriteStringBuf(&content, "@"+rl.Name)
+				// But we only add the color if the role has one.
+				if rgb := rl.Color.Uint32(); rgb > 0 {
+					segutil.Add(&segment, colored.NewSegment(start, end, rgb))
+				}
 			}
 
-			// Prepend a new line before each item.
-			content.WriteByte('\n')
-			// Write exactly the role name, then grab the segment and color it.
-			start, end := segutil.WriteStringBuf(&content, "@"+rl.Name)
-			// But we only add the color if the role has one.
-			if rgb := rl.Color.Uint32(); rgb > 0 {
-				segutil.Add(&segment, colored.NewSegment(start, end, rgb))
-			}
+			// End section.
+			content.WriteString("\n\n")
 		}
+	}
 
-		// End section.
-		content.WriteString("\n\n")
+	// Does the user have rich presence? If so, write.
+	if p := um.getPresence(); p != nil {
+		for _, ac := range p.Activities {
+			formatActivity(&segment, &content, ac)
+			content.WriteString("\n\n")
+		}
 	}
 
 	// These information can only be obtained from the state. As such, we check
 	// if the state is given.
 	if um.ningen != nil {
-		// Does the user have rich presence? If so, write.
-		if p, err := um.store.Presence(um.Guild.ID, um.Member.User.ID); err == nil {
-			for _, ac := range p.Activities {
-				formatActivity(&segment, &content, ac)
-				content.WriteString("\n\n")
-			}
-		} else if um.Guild.ID.IsValid() {
-			// If we're still in a guild, then we can ask Discord for that
-			// member with their presence attached.
-			um.ningen.MemberState.RequestMember(um.Guild.ID, um.Member.User.ID)
-		}
-
 		// Write the user's note if any.
-		if note := um.ningen.NoteState.Note(um.Member.User.ID); note != "" {
-			formatSectionf(&segment, &content, "Note")
-			content.WriteRune('\n')
+		formatSectionf(&segment, &content, "Note")
+		content.WriteRune('\n')
 
+		if note := um.ningen.NoteState.Note(um.user.ID); note != "" {
 			start, end := segutil.WriteStringBuf(&content, note)
 			segutil.Add(&segment, inline.NewSegment(start, end, text.AttributeMonospace))
-
-			content.WriteString("\n\n")
+		} else {
+			start, end := segutil.WriteStringBuf(&content, "empty")
+			segutil.Add(&segment, inline.NewSegment(start, end, text.AttributeDimmed))
 		}
+
+		content.WriteString("\n\n")
 	}
 
 	// Assign the written content into the text segment and return it after
 	// trimming the trailing new line.
 	segment.Content = strings.TrimSuffix(content.String(), "\n")
 	return segment
+}
+
+func (um *User) getGuild() *discord.Guild {
+	if um.guild != nil {
+		return um.guild
+	}
+
+	g, err := um.store.Guild(um.guildID)
+	if err != nil {
+		return nil
+	}
+
+	um.guild = g
+	return g
+}
+
+func (um *User) getMember() *discord.Member {
+	if !um.guildID.IsValid() {
+		return nil
+	}
+
+	if um.member != nil {
+		return um.member
+	}
+
+	m, err := um.store.Member(um.guildID, um.user.ID)
+	if err != nil {
+		if um.ningen != nil {
+			um.ningen.MemberState.RequestMember(um.guildID, um.user.ID)
+		}
+
+		return nil
+	}
+
+	um.member = m
+	return m
+}
+
+func (um *User) getPresence() *gateway.Presence {
+	if um.presence != nil {
+		return um.presence
+	}
+
+	p, err := um.store.Presence(um.guildID, um.user.ID)
+	if err != nil {
+		if um.guildID.IsValid() && um.ningen != nil {
+			um.ningen.MemberState.RequestMember(um.guildID, um.user.ID)
+		}
+
+		return nil
+	}
+
+	um.presence = p
+	return p
 }

@@ -8,7 +8,6 @@ import (
 	"github.com/diamondburned/arikawa/v2/state/store"
 	"github.com/diamondburned/cchat-discord/internal/segments/segutil"
 	"github.com/diamondburned/cchat/text"
-	"github.com/diamondburned/ningen/v2/md"
 	"github.com/yuin/goldmark/ast"
 )
 
@@ -23,24 +22,6 @@ func Register(kind ast.NodeKind, r Renderer) {
 
 var smallRenderers = map[ast.NodeKind]Renderer{}
 
-// Parse parses the raw Markdown bytes into a rich text.
-func Parse(b []byte) text.Rich {
-	node := md.Parse(b)
-	return RenderNode(b, node)
-}
-
-// RenderNode renders the given raw Markdown bytes with the parsed AST node into
-// a rich text.
-func RenderNode(source []byte, n ast.Node) text.Rich {
-	r := New(source, n)
-	r.Walk(n)
-
-	return text.Rich{
-		Content:  r.String(),
-		Segments: r.Segments,
-	}
-}
-
 type Text struct {
 	Buffer   *bytes.Buffer
 	Source   []byte
@@ -53,14 +34,13 @@ type Text struct {
 	Store   store.Cabinet
 }
 
-func New(src []byte, node ast.Node) *Text {
+func New(src []byte) *Text {
 	buf := &bytes.Buffer{}
 	buf.Grow(len(src))
 
 	return &Text{
-		Source:   src,
-		Buffer:   buf,
-		Segments: make([]text.Segment, 0, node.ChildCount()),
+		Source: src,
+		Buffer: buf,
 	}
 }
 
@@ -178,6 +158,10 @@ func (r *Text) Join(renderer *Text) {
 
 // Walk walks on the given node with the RenderNode as the walker function.
 func (r *Text) Walk(n ast.Node) {
+	if r.Segments == nil {
+		r.Segments = make([]text.Segment, 0, n.ChildCount())
+	}
+
 	ast.Walk(n, r.RenderNode)
 }
 

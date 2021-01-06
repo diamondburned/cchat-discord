@@ -46,8 +46,8 @@ func RenderMemberName(m discord.Member, g discord.Guild, s *state.Instance) text
 }
 
 // richMember appends the member name directly into rich.
-func richMember(
-	rich *text.Rich, m discord.Member, g discord.Guild, s *state.Instance) (start, end int) {
+func richMember(rich *text.Rich,
+	m discord.Member, g discord.Guild, s *state.Instance) (start, end int) {
 
 	var displayName = m.User.Username
 	if m.Nick != "" {
@@ -65,15 +65,17 @@ func richMember(
 	}
 
 	// Append a clickable user popup.
-	useg := mention.MemberSegment(start, end, g, m)
-	useg.WithState(s.State)
-	rich.Segments = append(rich.Segments, useg)
+	user := mention.NewUser(m.User)
+	user.WithState(s.State)
+	user.SetMember(g.ID, &m)
+
+	rich.Segments = append(rich.Segments, mention.NewSegment(start, end, user))
 
 	return
 }
 
-func richUser(
-	rich *text.Rich, u discord.User, s *state.Instance) (start, end int) {
+func richUser(rich *text.Rich,
+	u discord.User, s *state.Instance) (start, end int) {
 
 	start, end = segutil.Write(rich, u.Username)
 
@@ -86,9 +88,10 @@ func richUser(
 	}
 
 	// Append a clickable user popup.
-	useg := mention.UserSegment(start, end, u)
-	useg.WithState(s.State)
-	rich.Segments = append(rich.Segments, useg)
+	user := mention.NewUser(u)
+	user.WithState(s.State)
+
+	rich.Segments = append(rich.Segments, mention.NewSegment(start, end, user))
 
 	return
 }

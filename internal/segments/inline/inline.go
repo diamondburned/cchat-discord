@@ -62,6 +62,18 @@ func DimSuffix(prefix, suffix string) text.Rich {
 	}
 }
 
+func Write(rich *text.Rich, content string, attr text.Attribute) {
+	start := len(rich.Content)
+	rich.Content += content
+	end := len(rich.Content)
+
+	rich.Segments = append(rich.Segments, Segment{
+		start:      start,
+		end:        end,
+		attributes: Attribute(attr),
+	})
+}
+
 type Segment struct {
 	empty.TextSegment
 	start, end int
