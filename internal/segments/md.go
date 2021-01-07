@@ -24,12 +24,7 @@ func ParseMessage(m *discord.Message, s store.Cabinet) text.Rich {
 }
 
 func ParseMessageRich(rich *text.Rich, m *discord.Message, s store.Cabinet) {
-	var content = []byte(m.Content)
-	if len(content) == 0 {
-		return
-	}
-
-	var node = md.ParseWithMessage(content, s, m, true)
+	content := []byte(m.Content)
 
 	r := renderer.New(content)
 	r.Buffer.Grow(len(rich.Content))
@@ -37,8 +32,13 @@ func ParseMessageRich(rich *text.Rich, m *discord.Message, s store.Cabinet) {
 
 	// Register the needed states for some renderers.
 	r.WithState(m, s)
+
 	// Render the main message body.
-	r.Walk(node)
+	if len(content) > 0 {
+		node := md.ParseWithMessage(content, s, m, true)
+		r.Walk(node)
+	}
+
 	// Render the extra bits.
 	embed.RenderAttachments(r, m.Attachments)
 	embed.RenderEmbeds(r, m.Embeds, m, s)
@@ -74,16 +74,17 @@ func ParseWithMessageRich(rich *text.Rich, b []byte, m *discord.Message, s store
 // Ellipsize caps the length of the rendered text segment to be not longer than
 // the given length. The ellipsize will be appended if it is.
 func Ellipsize(rich text.Rich, maxLen int) text.Rich {
-	if maxLen > len(rich.Content) {
-		maxLen = len(rich.Content) - 1
-		if maxLen <= 0 {
-			return text.Rich{}
-		}
-
-		rich.Content += "…"
+	ellipsize := maxLen < len(rich.Content)
+	if !ellipsize {
+		maxLen = len(rich.Content)
 	}
 
-	return Substring(rich, 0, maxLen)
+	substr := Substring(rich, 0, maxLen)
+	if ellipsize {
+		substr.Content += "…"
+	}
+
+	return substr
 }
 
 // Substring slices the given rich text.
