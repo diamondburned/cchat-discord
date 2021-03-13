@@ -40,22 +40,18 @@ func (l *Member) ID() cchat.ID {
 	return l.mention.UserID().String()
 }
 
-func (l *Member) Name() text.Rich {
+func (l *Member) Name(ctx context.Context, labeler cchat.LabelContainer) error {
+	l.mention.Prefetch()
 	content := l.mention.DisplayName()
 
-	return text.Rich{
+	labeler.SetLabel(text.Rich{
 		Content: content,
 		Segments: []text.Segment{
 			mention.NewSegment(0, len(content), &l.mention),
 		},
-	}
-}
+	})
 
-func (l *Member) AsIconer() cchat.Iconer { return l }
-
-func (l *Member) Icon(ctx context.Context, c cchat.IconContainer) (func(), error) {
-	c.SetIcon(l.mention.Avatar())
-	return func() {}, nil
+	return nil
 }
 
 func (l *Member) Status() cchat.Status {

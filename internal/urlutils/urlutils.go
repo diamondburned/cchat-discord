@@ -9,9 +9,12 @@ import (
 	"github.com/diamondburned/arikawa/v2/discord"
 )
 
+// AvatarSize is the size of the source image.
+const AvatarSize = 128
+
 // AvatarURL wraps the URL with URL queries for the avatar.
 func AvatarURL(URL string) string {
-	return Sized(URL, 128)
+	return Sized(URL, AvatarSize)
 }
 
 // Sized wraps the URL with the size query.

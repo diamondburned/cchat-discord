@@ -1,12 +1,58 @@
 package mention
 
 import (
+	"strings"
+
 	"github.com/diamondburned/arikawa/v2/discord"
 	"github.com/diamondburned/cchat-discord/internal/segments/renderer"
 	"github.com/diamondburned/cchat/text"
 	"github.com/diamondburned/ningen/v2"
 	"github.com/diamondburned/ningen/v2/md"
 )
+
+// ChannelName returns the channel name if any, otherwise it formats its own
+// name into a list of recipients.
+func ChannelName(ch discord.Channel) string {
+	switch ch.Type {
+	case discord.DirectMessage, discord.GroupDM:
+		if len(ch.DMRecipients) > 0 {
+			return FormatRecipients(ch.DMRecipients)
+		}
+
+	default:
+		if ch.Name == "" {
+			break
+		}
+
+		if ch.NSFW {
+			return "#" + ch.Name + " (nsfw)"
+		} else {
+			return "#" + ch.Name
+		}
+	}
+
+	return ch.ID.String()
+}
+
+// FormatRecipients joins the given list of users into a string listing all
+// recipients with English punctuation rules.
+func FormatRecipients(users []discord.User) string {
+	switch len(users) {
+	case 0:
+		return ""
+	case 1:
+		return users[0].Username
+	case 2:
+		return users[0].Username + " and " + users[1].Username
+	}
+
+	var usernames = make([]string, len(users)-1)
+	for i, user := range users[:len(users)-1] {
+		usernames[i] = user.Username
+	}
+
+	return strings.Join(usernames, ", ") + " and " + users[len(users)-1].Username
+}
 
 type Channel struct {
 	discord.Channel

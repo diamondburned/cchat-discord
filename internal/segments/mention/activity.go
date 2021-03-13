@@ -34,7 +34,7 @@ func NewLargeActivityImage(start int, ac discord.Activity) LargeActivityImage {
 
 	return LargeActivityImage{
 		start: start,
-		url:   urlutils.AssetURL(ac.ApplicationID, ac.Assets.LargeImage),
+		url:   urlutils.AssetURL(ac.AppID, ac.Assets.LargeImage),
 		text:  ac.Assets.LargeText,
 	}
 }

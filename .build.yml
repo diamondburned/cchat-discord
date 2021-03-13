@@ -1,0 +1,7 @@
+image: alpine/edge
+sources:
+    - https://github.com/diamondburned/cchat-discord
+tasks:
+    - plugin: |
+        cd cchat-discord
+        go build -buildmode=plugin ./cmd/plugin

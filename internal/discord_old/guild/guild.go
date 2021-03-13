@@ -98,7 +98,8 @@ func (g *Guild) Servers(container cchat.ServersContainer) error {
 		return toplevels[i].Type != discord.GuildCategory
 	})
 
-	var chs = make([]cchat.Server, 0, len(toplevels))
+	chs := make([]cchat.Server, 0, len(toplevels))
+	ids := make(map[discord.ChannelID]struct{}, len(toplevels))
 
 	for _, ch := range toplevels {
 		switch ch.Type {
@@ -110,9 +111,14 @@ func (g *Guild) Servers(container cchat.ServersContainer) error {
 				return errors.Wrapf(err, "Failed to make channel %q: %v", ch.Name, err)
 			}
 			chs = append(chs, c)
+		default:
+			continue
 		}
 	}
 
 	container.SetServers(chs)
+
+	// TODO: account for insertion/deletion.
+
 	return nil
 }

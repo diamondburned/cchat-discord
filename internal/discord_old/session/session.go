@@ -93,9 +93,8 @@ func (s *Session) Servers(container cchat.ServersContainer) error {
 func (s *Session) servers(container cchat.ServersContainer) error {
 	ready := s.state.Ready()
 
-	switch {
 	// If the user has guild folders:
-	case len(ready.UserSettings.GuildFolders) > 0:
+	if len(ready.UserSettings.GuildFolders) > 0 {
 		// TODO: account for missing guilds.
 		toplevels := make([]cchat.Server, 1, len(ready.UserSettings.GuildFolders)+1)
 		toplevels[0] = s.private
@@ -118,10 +117,12 @@ func (s *Session) servers(container cchat.ServersContainer) error {
 		}
 
 		container.SetServers(toplevels)
+		return nil
+	}
 
 	// If the user doesn't have guild folders but has sorted their guilds
 	// before:
-	case len(ready.UserSettings.GuildPositions) > 0:
+	if len(ready.UserSettings.GuildPositions) > 0 {
 		guilds := make([]cchat.Server, 1, len(ready.UserSettings.GuildPositions)+1)
 		guilds[0] = s.private
 
@@ -134,23 +135,22 @@ func (s *Session) servers(container cchat.ServersContainer) error {
 		}
 
 		container.SetServers(guilds)
-
-	// None of the above:
-	default:
-		g, err := s.state.Guilds()
-		if err != nil {
-			return err
-		}
-
-		servers := make([]cchat.Server, len(g)+1)
-		servers[0] = s.private
-
-		for i := range g {
-			servers[i+1] = guild.New(s.state, &g[i])
-		}
-
-		container.SetServers(servers)
+		return nil
 	}
 
+	// None of the above:
+	g, err := s.state.Guilds()
+	if err != nil {
+		return err
+	}
+
+	servers := make([]cchat.Server, len(g)+1)
+	servers[0] = s.private
+
+	for i := range g {
+		servers[i+1] = guild.New(s.state, &g[i])
+	}
+
+	container.SetServers(servers)
 	return nil
 }

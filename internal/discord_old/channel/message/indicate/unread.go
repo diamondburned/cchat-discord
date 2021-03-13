@@ -1,6 +1,7 @@
 package indicate
 
 import (
+	"github.com/diamondburned/arikawa/v2/discord"
 	"github.com/diamondburned/cchat"
 	"github.com/diamondburned/cchat-discord/internal/discord/channel/shared"
 	"github.com/diamondburned/ningen/v2/states/read"
@@ -40,4 +41,13 @@ func (ui UnreadIndicator) UnreadIndicate(indicator cchat.UnreadContainer) (func(
 			indicator.SetUnread(ev.Unread, ev.MentionCount > 0)
 		}
 	}), nil
+}
+
+func (ui UnreadIndicator) MarkRead(msgID cchat.ID) {
+	d, err := discord.ParseSnowflake(msgID)
+	if err != nil {
+		return
+	}
+
+	ui.State.ReadState.MarkRead(ui.ID, discord.MessageID(d))
 }

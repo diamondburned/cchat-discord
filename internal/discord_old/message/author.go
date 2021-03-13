@@ -17,7 +17,7 @@ type Author struct {
 	user *mention.User // same pointer as in name
 }
 
-var _ cchat.Author = (*Author)(nil)
+var _ cchat.User = (*Author)(nil)
 
 // NewAuthor creates a new message author.
 func NewAuthor(user *mention.User) Author {

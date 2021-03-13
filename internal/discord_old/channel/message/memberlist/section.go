@@ -1,6 +1,7 @@
 package memberlist
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/diamondburned/arikawa/v2/discord"
@@ -8,12 +9,9 @@ import (
 	"github.com/diamondburned/cchat"
 	"github.com/diamondburned/cchat-discord/internal/discord/channel/shared"
 	"github.com/diamondburned/cchat/text"
-	"github.com/diamondburned/cchat/utils/empty"
 )
 
 type Section struct {
-	empty.Namer
-
 	// constant states
 	listID string
 	id     string // roleID or online or offline
@@ -63,8 +61,9 @@ func (s Section) ID() cchat.ID {
 	return s.id
 }
 
-func (s Section) Name() text.Rich {
-	return text.Rich{Content: s.name}
+func (s Section) Name(ctx context.Context, labeler cchat.LabelContainer) (err error) {
+	labeler.SetLabel(text.Plain(s.name))
+	return nil
 }
 
 func (s Section) Total() int {

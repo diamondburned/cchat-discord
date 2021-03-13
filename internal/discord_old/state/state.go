@@ -9,7 +9,6 @@ import (
 	"github.com/diamondburned/arikawa/v2/state"
 	"github.com/diamondburned/arikawa/v2/state/store/defaultstore"
 	"github.com/diamondburned/cchat"
-	"github.com/diamondburned/cchat-discord/internal/discord/state/labels"
 	"github.com/diamondburned/cchat-discord/internal/discord/state/nonce"
 	"github.com/diamondburned/ningen/v2"
 	"github.com/pkg/errors"
@@ -18,7 +17,6 @@ import (
 type Instance struct {
 	*ningen.State
 	Nonces *nonce.Map
-	Labels *labels.Repository
 
 	// UserID is a constant user ID of the current user. It is guaranteed to be
 	// valid.
@@ -87,7 +85,6 @@ func New(s *state.State) (*Instance, error) {
 		UserID: u.ID,
 		State:  n,
 		Nonces: new(nonce.Map),
-		Labels: labels.NewRepository(n),
 	}, nil
 }
 
