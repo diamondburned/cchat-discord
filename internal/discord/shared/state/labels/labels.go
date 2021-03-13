@@ -6,6 +6,7 @@ import (
 	"github.com/diamondburned/arikawa/v2/discord"
 	"github.com/diamondburned/arikawa/v2/gateway"
 	"github.com/diamondburned/cchat"
+	"github.com/diamondburned/cchat-discord/internal/segments/mention"
 	"github.com/diamondburned/ningen/v2"
 )
 
@@ -54,7 +55,7 @@ func (r *Repository) onGuildUpdate(ev *gateway.GuildUpdateEvent) {
 		return
 	}
 
-	rich := labelGuild(r.state, ev.ID)
+	rich := mention.NewGuildText(r.state, ev.ID)
 
 	for labeler := range guild.guild {
 		labeler.SetLabel(rich)
@@ -64,7 +65,7 @@ func (r *Repository) onGuildUpdate(ev *gateway.GuildUpdateEvent) {
 // AddGuildLabel adds a label to display the given guild ID. Refer to Repository
 // for more documentation.
 func (r *Repository) AddGuildLabel(guildID discord.GuildID, l cchat.LabelContainer) func() {
-	l.SetLabel(labelGuild(r.state, guildID))
+	l.SetLabel(mention.NewGuildText(r.state, guildID))
 
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
@@ -89,16 +90,37 @@ func (r *Repository) AddGuildLabel(guildID discord.GuildID, l cchat.LabelContain
 	}
 }
 
-func (r *Repository) onMemberRemove(ev *gateway.GuildMemberRemoveEvent) {}
+func (r *Repository) onMemberRemove(ev *gateway.GuildMemberRemoveEvent) {
+	// Not sure what to do.
+}
 
-func (r *Repository) onMemberUpdate(ev *gateway.GuildMemberUpdateEvent) {}
+func (r *Repository) onMemberUpdate(ev *gateway.GuildMemberUpdateEvent) {
+	r.mutex.Lock()
+	defer r.mutex.Unlock()
+
+	if r.stopped {
+		return
+	}
+
+	guild, _ := r.stores.guilds[ev.GuildID]
+	member, ok := guild.members[ev.User.ID]
+	if !ok {
+		return
+	}
+
+	rich := mention.NewMemberText(r.state, ev.GuildID, ev.User.ID)
+
+	for labeler := range member {
+		labeler.SetLabel(rich)
+	}
+}
 
 // AddMemberLabel adds a label to display the given member live. Refer to
 // Repository for more documentation.
 func (r *Repository) AddMemberLabel(
 	guildID discord.GuildID, userID discord.UserID, l cchat.LabelContainer) func() {
 
-	l.SetLabel(labelMember(r.state, guildID, userID))
+	l.SetLabel(mention.NewMemberText(r.state, guildID, userID))
 
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
@@ -134,13 +156,34 @@ func (r *Repository) AddMemberLabel(
 	}
 }
 
-func (r *Repository) onChannelUpdate(ev *gateway.ChannelUpdateEvent) {}
-func (r *Repository) onChannelDelete(ev *gateway.ChannelDeleteEvent) {}
+func (r *Repository) onChannelDelete(ev *gateway.ChannelDeleteEvent) {
+	// Not sure what to do.
+}
+
+func (r *Repository) onChannelUpdate(ev *gateway.ChannelUpdateEvent) {
+	r.mutex.Lock()
+	defer r.mutex.Unlock()
+
+	if r.stopped {
+		return
+	}
+
+	channel, ok := r.stores.channels[ev.ID]
+	if !ok {
+		return
+	}
+
+	rich := mention.NewChannelText(r.state, ev.ID)
+
+	for labeler := range channel {
+		labeler.SetLabel(rich)
+	}
+}
 
 // AddChannelLabel adds a label to display the given channel live. Refer to
 // Repository for more documentation.
 func (r *Repository) AddChannelLabel(chID discord.ChannelID, l cchat.LabelContainer) func() {
-	l.SetLabel(labelChannel(r.state, chID))
+	l.SetLabel(mention.NewChannelText(r.state, chID))
 
 	r.mutex.Lock()
 	defer r.mutex.Unlock()

@@ -54,6 +54,26 @@ func FormatRecipients(users []discord.User) string {
 	return strings.Join(usernames, ", ") + " and " + users[len(users)-1].Username
 }
 
+// NewChannelText creates a new rich text describing the given channel fetched
+// from the state.
+func NewChannelText(s *ningen.State, chID discord.ChannelID) text.Rich {
+	ch, err := s.Cabinet.Channel(chID)
+	if err != nil {
+		return text.Plain(ch.Mention())
+	}
+
+	rich := text.Rich{Content: ChannelName(*ch)}
+	rich.Segments = []text.Segment{
+		Segment{
+			Start:   0,
+			End:     len(rich.Content),
+			Channel: NewChannel(*ch),
+		},
+	}
+
+	return rich
+}
+
 type Channel struct {
 	discord.Channel
 }

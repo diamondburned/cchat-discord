@@ -12,41 +12,41 @@ import (
 	"github.com/diamondburned/cchat-discord/internal/segments/segutil"
 	"github.com/diamondburned/cchat-discord/internal/urlutils"
 	"github.com/diamondburned/cchat/text"
-	"github.com/diamondburned/cchat/utils/empty"
 	"github.com/diamondburned/ningen/v2"
 )
 
-// NameSegment represents a clickable member name.
-type NameSegment struct {
-	empty.TextSegment
-	start int
-	end   int
-	um    User
-}
-
-var _ text.Segment = (*NameSegment)(nil)
-
-func NewSegment(start, end int, user *User) NameSegment {
-	return NameSegment{
-		start: start,
-		end:   end,
-		um:    *user,
+// NewMemberText creates a new rich text describing the given member fetched
+// from the state.
+func NewMemberText(s *ningen.State, g discord.GuildID, u discord.UserID) text.Rich {
+	m, err := s.Cabinet.Member(g, u)
+	if err != nil {
+		s.MemberState.RequestMember(g, u)
+		return text.Plain(u.Mention())
 	}
-}
 
-func (m NameSegment) Bounds() (start, end int) {
-	return m.start, m.end
-}
+	user := NewUser(m.User)
+	user.WithMember(*m)
+	user.WithGuildID(g)
+	user.WithState(s)
+	user.Prefetch()
 
-func (m NameSegment) AsMentioner() text.Mentioner { return &m.um }
-func (m NameSegment) AsAvatarer() text.Avatarer   { return &m.um }
-
-// AsColorer only returns User if the user actually has a colored role.
-func (m NameSegment) AsColorer() text.Colorer {
-	if m.um.HasColor() {
-		return &m.um
+	rich := text.Rich{Content: user.DisplayName()}
+	rich.Segments = []text.Segment{
+		Segment{
+			Start: 0,
+			End:   len(rich.Content),
+			User:  user,
+		},
 	}
-	return nil
+
+	if m.User.Bot {
+		rich.Content += " "
+		rich.Segments = append(rich.Segments,
+			colored.NewBlurple(segutil.Write(&rich, "[BOT]")),
+		)
+	}
+
+	return rich
 }
 
 type User struct {

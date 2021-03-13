@@ -3,7 +3,9 @@ package state
 
 import (
 	"context"
+	"log"
 
+	"github.com/diamondburned/arikawa/utils/httputil/httpdriver"
 	"github.com/diamondburned/arikawa/v2/discord"
 	"github.com/diamondburned/arikawa/v2/session"
 	"github.com/diamondburned/arikawa/v2/state"
@@ -66,12 +68,12 @@ func New(s *state.State) (*Instance, error) {
 		return nil, errors.Wrap(err, "failed to create a state wrapper")
 	}
 
-	// n.Client.OnRequest = append(n.Client.OnRequest,
-	// 	func(r httpdriver.Request) error {
-	// 		log.Println("[Discord] Request", r.GetPath())
-	// 		return nil
-	// 	},
-	// )
+	n.Client.OnRequest = append(n.Client.OnRequest,
+		func(r httpdriver.Request) error {
+			log.Println("[Discord] Request", r.GetPath())
+			return nil
+		},
+	)
 
 	if err := n.Open(); err != nil {
 		return nil, err
