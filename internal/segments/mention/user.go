@@ -91,6 +91,11 @@ func (um *User) UserID() discord.UserID {
 	return um.user.ID
 }
 
+// GuildID returns the guild ID, if any.
+func (um *User) GuildID() discord.GuildID {
+	return um.guildID
+}
+
 // SetGuildID sets the user's guild ID.
 func (um *User) WithGuildID(guildID discord.GuildID) {
 	um.guildID = guildID

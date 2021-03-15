@@ -1,9 +1,11 @@
 package discord
 
 import (
+	"context"
+
 	"github.com/diamondburned/cchat"
+	"github.com/diamondburned/cchat-discord/internal/config"
 	"github.com/diamondburned/cchat-discord/internal/discord/authenticate"
-	"github.com/diamondburned/cchat-discord/internal/discord/config"
 	"github.com/diamondburned/cchat-discord/internal/discord/session"
 	"github.com/diamondburned/cchat-discord/internal/segments/avatar"
 	"github.com/diamondburned/cchat/services"
@@ -29,11 +31,13 @@ type Service struct {
 	empty.Service
 }
 
-func (Service) Name() text.Rich {
-	return text.Rich{
+func (Service) Name(_ context.Context, l cchat.LabelContainer) (func(), error) {
+	l.SetLabel(text.Rich{
 		Content:  "Discord",
 		Segments: []text.Segment{Logo},
-	}
+	})
+
+	return func() {}, nil
 }
 
 func (Service) Authenticate() []cchat.Authenticator {

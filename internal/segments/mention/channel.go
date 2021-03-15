@@ -63,14 +63,20 @@ func NewChannelText(s *ningen.State, chID discord.ChannelID) text.Rich {
 	}
 
 	rich := text.Rich{Content: ChannelName(*ch)}
-	rich.Segments = []text.Segment{
-		Segment{
-			Start:   0,
-			End:     len(rich.Content),
-			Channel: NewChannel(*ch),
-		},
+	segment := Segment{
+		Start: 0,
+		End:   len(rich.Content),
 	}
 
+	if ch.Type == discord.DirectMessage && len(ch.DMRecipients) == 1 {
+		segment.User = NewUser(ch.DMRecipients[0])
+		segment.User.WithState(s)
+		segment.User.Prefetch()
+	} else {
+		segment.Channel = NewChannel(*ch)
+	}
+
+	rich.Segments = []text.Segment{segment}
 	return rich
 }
 

@@ -7,13 +7,11 @@ import (
 	"github.com/diamondburned/arikawa/v2/gateway"
 	"github.com/diamondburned/arikawa/v2/session"
 	"github.com/diamondburned/cchat"
-	"github.com/diamondburned/cchat-discord/internal/discord/folder"
-	"github.com/diamondburned/cchat-discord/internal/discord/guild"
-	"github.com/diamondburned/cchat-discord/internal/discord/private"
-	"github.com/diamondburned/cchat-discord/internal/discord/shared/state"
+	"github.com/diamondburned/cchat-discord/internal/discord/session/guild"
+	"github.com/diamondburned/cchat-discord/internal/discord/session/guild/folder"
+	"github.com/diamondburned/cchat-discord/internal/discord/session/private"
+	"github.com/diamondburned/cchat-discord/internal/discord/state"
 	"github.com/diamondburned/cchat-discord/internal/funcutil"
-	"github.com/diamondburned/cchat-discord/internal/segments/mention"
-	"github.com/diamondburned/cchat/text"
 	"github.com/diamondburned/cchat/utils/empty"
 	"github.com/diamondburned/ningen/v2"
 	"github.com/pkg/errors"
@@ -44,27 +42,7 @@ func (s *Session) ID() cchat.ID {
 }
 
 func (s *Session) Name(ctx context.Context, l cchat.LabelContainer) (func(), error) {
-	u, err := s.state.Cabinet.Me()
-	if err != nil {
-		l.SetLabel(text.Plain("<@" + s.state.UserID.String() + ">"))
-	} else {
-		user := mention.NewUser(*u)
-		user.WithState(s.state.State)
-		user.Prefetch()
-
-		rich := text.Plain(user.DisplayName())
-		rich.Segments = []text.Segment{
-			mention.Segment{
-				End:  len(rich.Content),
-				User: user,
-			},
-		}
-
-		l.SetLabel(rich)
-	}
-
-	// TODO.
-	return func() {}, nil
+	return s.state.Labels.AddPresenceLabel(s.state.UserID, l), nil
 }
 
 func (s *Session) Disconnect() error {
