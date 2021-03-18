@@ -57,6 +57,8 @@ func (ch Channel) Name(_ context.Context, l cchat.LabelContainer) (func(), error
 	return ch.State.Labels.AddChannelLabel(ch.Channel.ID, l), nil
 }
 
+func (ch Channel) Columnate() int { return 2 }
+
 func (ch Channel) AsCommander() cchat.Commander {
 	return ch.commander
 }

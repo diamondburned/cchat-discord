@@ -96,6 +96,8 @@ func (priv Private) Name(_ context.Context, l cchat.LabelContainer) (func(), err
 	return func() {}, nil
 }
 
+func (priv Private) Columnate() int { return 1 }
+
 func (priv Private) AsLister() cchat.Lister { return priv }
 
 type activeChannel struct {

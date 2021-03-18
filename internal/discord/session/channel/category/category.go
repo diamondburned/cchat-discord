@@ -80,6 +80,8 @@ func (c *Category) Name(_ context.Context, l cchat.LabelContainer) (func(), erro
 	return c.state.Labels.AddChannelLabel(c.id, l), nil
 }
 
+func (c *Category) Columnate() int { return 2 }
+
 func (c *Category) AsLister() cchat.Lister { return c }
 
 func (c *Category) Servers(container cchat.ServersContainer) (func(), error) {

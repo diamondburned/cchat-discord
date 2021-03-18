@@ -60,6 +60,8 @@ func (gf *GuildFolder) Name(ctx context.Context, l cchat.LabelContainer) (func()
 	return func() {}, nil
 }
 
+func (gf *GuildFolder) Columnate() int { return 1 }
+
 // IsLister returns true.
 func (gf *GuildFolder) AsLister() cchat.Lister { return gf }
 

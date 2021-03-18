@@ -48,6 +48,8 @@ func (g *Guild) Name(ctx context.Context, l cchat.LabelContainer) (func(), error
 	return g.state.Labels.AddGuildLabel(g.id, l), nil
 }
 
+func (g *Guild) Columnate() int { return 1 }
+
 func (g *Guild) AsLister() cchat.Lister { return g }
 
 func (g *Guild) Servers(container cchat.ServersContainer) (func(), error) {
