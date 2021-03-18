@@ -80,7 +80,7 @@ func (c *Category) Name(_ context.Context, l cchat.LabelContainer) (func(), erro
 	return c.state.Labels.AddChannelLabel(c.id, l), nil
 }
 
-func (c *Category) Columnate() int { return 2 }
+func (c *Category) Columnate() bool { return false }
 
 func (c *Category) AsLister() cchat.Lister { return c }
 

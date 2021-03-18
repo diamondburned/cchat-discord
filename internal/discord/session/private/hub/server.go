@@ -143,7 +143,7 @@ func (hub *Server) Name(_ context.Context, l cchat.LabelContainer) (func(), erro
 	return func() {}, nil
 }
 
-func (hub *Server) Columnate() int { return 2 }
+func (hub *Server) Columnate() bool { return false }
 
 // ActiveChannelIDs returns the list of active channel IDs, that is, the channel
 // IDs that should be displayed separately.
