@@ -27,12 +27,8 @@ github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSs
 github.com/diamondburned/arikawa/v2 v2.0.0-20210101083335-169b36126239/go.mod h1:e+lhS20ni2luFEU06Pc8paCxgZL99/RZb77dOC82CF0=
 github.com/diamondburned/arikawa/v2 v2.0.5 h1:X/jPfeEFj/Hzk26kudNJqtVkQb3vnh3tAjEF1mY7GK8=
 github.com/diamondburned/arikawa/v2 v2.0.5/go.mod h1:e+lhS20ni2luFEU06Pc8paCxgZL99/RZb77dOC82CF0=
-github.com/diamondburned/cchat v0.5.0 h1:+3+Rc0GnumLUJ9+GyJPRt6SVuH9vVp7B6hrHf8HsDKI=
-github.com/diamondburned/cchat v0.5.0/go.mod h1:IlMtF+XIvAJh0GL/2yFdf0/34w+Hdy5A1GgvSwAXtQI=
-github.com/diamondburned/cchat v0.5.1 h1:Ju34nv0tbLaWfm+LtyUA4TPlX7206eXo6LM+3JzosQo=
-github.com/diamondburned/cchat v0.5.1/go.mod h1:IlMtF+XIvAJh0GL/2yFdf0/34w+Hdy5A1GgvSwAXtQI=
-github.com/diamondburned/cchat v0.5.4 h1:0N/H+zs4T6YBOP5dtUnJ+paZfq06772b5CXRw7bWx7U=
-github.com/diamondburned/cchat v0.5.4/go.mod h1:IlMtF+XIvAJh0GL/2yFdf0/34w+Hdy5A1GgvSwAXtQI=
+github.com/diamondburned/cchat v0.5.5 h1:YgI98ID9UQAgHbLFEyHQ2qcAJ5A2HcVZaq+A26njAQo=
+github.com/diamondburned/cchat v0.5.5/go.mod h1:IlMtF+XIvAJh0GL/2yFdf0/34w+Hdy5A1GgvSwAXtQI=
 github.com/diamondburned/ningen/v2 v2.0.0-20210106052055-9da2a0102d49 h1:wfj+fvDJLUC+xkRmVA/ZE9nmeSqFy4fbyIi3hBHgn/U=
 github.com/diamondburned/ningen/v2 v2.0.0-20210106052055-9da2a0102d49/go.mod h1:WRQCUX/dTH4OPEy3JANLA5D6fbumzp5zk03uSUAZppA=
 github.com/dustin/go-humanize v1.0.0 h1:VSnTsYCnlFHaM2/igO1h6X3HA71jcobQuxemgkq4zYo=

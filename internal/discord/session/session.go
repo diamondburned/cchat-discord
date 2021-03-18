@@ -45,6 +45,8 @@ func (s *Session) Name(ctx context.Context, l cchat.LabelContainer) (func(), err
 	return s.state.Labels.AddPresenceLabel(s.state.UserID, l), nil
 }
 
+func (s *Session) Columnate() int { return 0 }
+
 func (s *Session) Disconnect() error {
 	return s.state.CloseGracefully()
 }
