@@ -4,7 +4,7 @@ go 1.14
 
 require (
 	github.com/diamondburned/arikawa/v2 v2.0.5
-	github.com/diamondburned/cchat v0.5.6
+	github.com/diamondburned/cchat v0.6.0
 	github.com/diamondburned/ningen/v2 v2.0.0-20210106052055-9da2a0102d49
 	github.com/dustin/go-humanize v1.0.0
 	github.com/go-test/deep v1.0.7

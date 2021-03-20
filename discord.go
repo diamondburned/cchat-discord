@@ -13,6 +13,9 @@ import (
 	"github.com/diamondburned/cchat/utils/empty"
 )
 
+// ID is the unique ID of this cchat service.
+const ID = "com.github.diamondburned.cchat-discord"
+
 var service cchat.Service = Service{}
 
 func init() {
@@ -30,6 +33,8 @@ var Logo = avatar.Segment{
 type Service struct {
 	empty.Service
 }
+
+func (Service) ID() string { return ID }
 
 func (Service) Name(_ context.Context, l cchat.LabelContainer) (func(), error) {
 	l.SetLabel(text.Rich{
