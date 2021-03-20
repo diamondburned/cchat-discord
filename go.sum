@@ -31,6 +31,8 @@ github.com/diamondburned/cchat v0.5.5 h1:YgI98ID9UQAgHbLFEyHQ2qcAJ5A2HcVZaq+A26n
 github.com/diamondburned/cchat v0.5.5/go.mod h1:IlMtF+XIvAJh0GL/2yFdf0/34w+Hdy5A1GgvSwAXtQI=
 github.com/diamondburned/cchat v0.6.0 h1:XVql8slOho9FUxuJm/I7/XWr5l1XgxLc5SvcvI+ybp4=
 github.com/diamondburned/cchat v0.6.0/go.mod h1:IlMtF+XIvAJh0GL/2yFdf0/34w+Hdy5A1GgvSwAXtQI=
+github.com/diamondburned/cchat v0.6.1 h1:BFpY2Nvnut1/X+0dhL8STK80RVmfEJLmf4ppTJX2ADg=
+github.com/diamondburned/cchat v0.6.1/go.mod h1:IlMtF+XIvAJh0GL/2yFdf0/34w+Hdy5A1GgvSwAXtQI=
 github.com/diamondburned/ningen/v2 v2.0.0-20210106052055-9da2a0102d49 h1:wfj+fvDJLUC+xkRmVA/ZE9nmeSqFy4fbyIi3hBHgn/U=
 github.com/diamondburned/ningen/v2 v2.0.0-20210106052055-9da2a0102d49/go.mod h1:WRQCUX/dTH4OPEy3JANLA5D6fbumzp5zk03uSUAZppA=
 github.com/dustin/go-humanize v1.0.0 h1:VSnTsYCnlFHaM2/igO1h6X3HA71jcobQuxemgkq4zYo=

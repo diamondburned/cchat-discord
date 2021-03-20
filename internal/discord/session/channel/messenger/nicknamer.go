@@ -23,6 +23,6 @@ func NewUserNicknamer(userID discord.UserID, ch shared.Channel) cchat.Nicknamer 
 	return nicknamer{userID, ch}
 }
 
-func (nn nicknamer) Nickname(ctx context.Context, labeler cchat.LabelContainer) (func(), error) {
+func (nn nicknamer) Name(ctx context.Context, labeler cchat.LabelContainer) (func(), error) {
 	return nn.State.Labels.AddMemberLabel(nn.GuildID, nn.userID, labeler), nil
 }
