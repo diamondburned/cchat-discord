@@ -1,7 +1,6 @@
 package memberlister
 
 import (
-	"context"
 	"fmt"
 	"strings"
 
@@ -40,11 +39,10 @@ func (l *Member) ID() cchat.ID {
 	return l.mention.UserID().String()
 }
 
-func (l *Member) Name(ctx context.Context, labeler cchat.LabelContainer) (func(), error) {
-	l.mention.Prefetch()
+func (l *Member) Name() text.Rich {
 	content := l.mention.DisplayName()
 
-	labeler.SetLabel(text.Rich{
+	return text.Rich{
 		Content: content,
 		Segments: []text.Segment{
 			mention.Segment{
@@ -52,9 +50,7 @@ func (l *Member) Name(ctx context.Context, labeler cchat.LabelContainer) (func()
 				User: &l.mention,
 			},
 		},
-	})
-
-	return func() {}, nil
+	}
 }
 
 func (l *Member) Status() cchat.Status {
