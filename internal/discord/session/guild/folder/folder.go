@@ -56,6 +56,8 @@ func (gf *GuildFolder) Name(ctx context.Context, l cchat.LabelContainer) (func()
 		}
 	}
 
+	l.SetLabel(name)
+
 	// TODO: add folder updater from setting update events.
 	return func() {}, nil
 }
