@@ -66,11 +66,7 @@ func (a Author) ID() cchat.ID {
 
 // Name subscribes the author to the global name label registry.
 func (a Author) Name(_ context.Context, l cchat.LabelContainer) (func(), error) {
-	if guildID := a.user.GuildID(); guildID.IsValid() {
-		return a.state.Labels.AddMemberLabel(guildID, a.user.UserID(), l), nil
-	}
-
-	return a.state.Labels.AddPresenceLabel(a.user.UserID(), l), nil
+	return a.state.Labels.AddMemberLabel(a.user.GuildID(), a.user.UserID(), l), nil
 }
 
 const authorReplyingTo = " replying to "

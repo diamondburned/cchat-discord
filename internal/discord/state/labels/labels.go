@@ -93,6 +93,58 @@ func (r *Repository) AddGuildLabel(guildID discord.GuildID, l cchat.LabelContain
 	}
 }
 
+func (r *Repository) onChannelDelete(ev *gateway.ChannelDeleteEvent) {
+	// Not sure what to do.
+}
+
+func (r *Repository) onChannelUpdate(ev *gateway.ChannelUpdateEvent) {
+	r.mutex.Lock()
+	defer r.mutex.Unlock()
+
+	if r.stopped {
+		return
+	}
+
+	channel, ok := r.stores.channels[ev.ID]
+	if !ok {
+		return
+	}
+
+	rich := mention.NewChannelText(r.state, ev.ID)
+
+	for labeler := range channel {
+		labeler.SetLabel(rich)
+	}
+}
+
+// AddChannelLabel adds a label to display the given channel live. Refer to
+// Repository for more documentation.
+func (r *Repository) AddChannelLabel(chID discord.ChannelID, l cchat.LabelContainer) func() {
+	l.SetLabel(mention.NewChannelText(r.state, chID))
+
+	r.mutex.Lock()
+	defer r.mutex.Unlock()
+
+	llist := r.stores.channels[chID]
+	llist.Add(l)
+	r.stores.channels[chID] = llist
+
+	return func() {
+		r.mutex.Lock()
+		defer r.mutex.Unlock()
+
+		llist := r.stores.channels[chID]
+		llist.Remove(l)
+
+		if len(llist) == 0 {
+			delete(r.stores.channels, chID)
+			return
+		}
+
+		r.stores.channels[chID] = llist
+	}
+}
+
 func (r *Repository) onMemberRemove(ev *gateway.GuildMemberRemoveEvent) {
 	// Not sure what to do.
 }
@@ -189,11 +241,7 @@ func (r *Repository) AddMemberLabel(
 	}
 }
 
-func (r *Repository) onChannelDelete(ev *gateway.ChannelDeleteEvent) {
-	// Not sure what to do.
-}
-
-func (r *Repository) onChannelUpdate(ev *gateway.ChannelUpdateEvent) {
+func (r *Repository) onPresenceUpdate(ev *gateway.PresenceUpdateEvent) {
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
 
@@ -201,51 +249,42 @@ func (r *Repository) onChannelUpdate(ev *gateway.ChannelUpdateEvent) {
 		return
 	}
 
-	channel, ok := r.stores.channels[ev.ID]
+	labels, ok := r.stores.presences[ev.User.ID]
 	if !ok {
 		return
 	}
 
-	rich := mention.NewChannelText(r.state, ev.ID)
+	rich := mention.NewUserText(r.state, ev.User.ID)
 
-	for labeler := range channel {
-		labeler.SetLabel(rich)
+	for label := range labels {
+		label.SetLabel(rich)
 	}
 }
 
-// AddChannelLabel adds a label to display the given channel live. Refer to
-// Repository for more documentation.
-func (r *Repository) AddChannelLabel(chID discord.ChannelID, l cchat.LabelContainer) func() {
-	l.SetLabel(mention.NewChannelText(r.state, chID))
+func (r *Repository) AddPresenceLabel(uID discord.UserID, l cchat.LabelContainer) func() {
+	l.SetLabel(mention.NewUserText(r.state, uID))
 
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
 
-	llist := r.stores.channels[chID]
+	llist := r.stores.presences[uID]
 	llist.Add(l)
-	r.stores.channels[chID] = llist
+	r.stores.presences[uID] = llist
 
 	return func() {
 		r.mutex.Lock()
 		defer r.mutex.Unlock()
 
-		llist := r.stores.channels[chID]
+		llist := r.stores.presences[uID]
 		llist.Remove(l)
 
 		if len(llist) == 0 {
-			delete(r.stores.channels, chID)
+			delete(r.stores.presences, uID)
 			return
 		}
 
-		r.stores.channels[chID] = llist
+		r.stores.presences[uID] = llist
 	}
-}
-
-func (r *Repository) AddPresenceLabel(uID discord.UserID, l cchat.LabelContainer) func() {
-	// TODO: Presence update events
-	// TODO: user fallbacks
-	panic("Implement me")
-	return nil
 }
 
 // Stop detaches all handlers.

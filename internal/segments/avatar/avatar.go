@@ -16,22 +16,20 @@ type Segment struct {
 }
 
 func (s Segment) Bounds() (int, int)        { return s.Position, s.Position }
-func (s Segment) AsAvatarer() text.Avatarer { return avatarURL{s} }
+func (s Segment) AsAvatarer() text.Avatarer { return avatarURL(s) }
 
-type avatarURL struct {
-	seg Segment
-}
+type avatarURL Segment
 
 var _ text.Avatarer = avatarURL{}
 
 func (aurl avatarURL) AvatarText() string {
-	return aurl.seg.Text
+	return aurl.Text
 }
 
 func (aurl avatarURL) AvatarSize() int {
-	return aurl.seg.Size
+	return aurl.Size
 }
 
 func (aurl avatarURL) Avatar() string {
-	return aurl.seg.URL
+	return aurl.URL
 }

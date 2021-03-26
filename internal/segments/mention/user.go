@@ -49,6 +49,38 @@ func NewMemberText(s *ningen.State, g discord.GuildID, u discord.UserID) text.Ri
 	return rich
 }
 
+// NewUserText creates a new rich text describing a Discord user using the
+// Presence API.
+func NewUserText(s *ningen.State, u discord.UserID) text.Rich {
+	p, err := s.Presence(0, u)
+	if err != nil {
+		return text.Plain(u.Mention())
+	}
+
+	user := NewUser(p.User)
+	user.WithPresence(*p)
+	user.WithState(s)
+	user.Prefetch()
+
+	rich := text.Rich{Content: user.DisplayName()}
+	rich.Segments = []text.Segment{
+		Segment{
+			Start: 0,
+			End:   len(rich.Content),
+			User:  user,
+		},
+	}
+
+	if p.User.Bot {
+		rich.Content += " "
+		rich.Segments = append(rich.Segments,
+			colored.NewBlurple(segutil.Write(&rich, "[BOT]")),
+		)
+	}
+
+	return rich
+}
+
 type User struct {
 	user    discord.User
 	guildID discord.GuildID
