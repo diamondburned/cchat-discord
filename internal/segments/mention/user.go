@@ -52,13 +52,22 @@ func NewMemberText(s *ningen.State, g discord.GuildID, u discord.UserID) text.Ri
 // NewUserText creates a new rich text describing a Discord user using the
 // Presence API.
 func NewUserText(s *ningen.State, u discord.UserID) text.Rich {
+	var discordUser discord.User
+
 	p, err := s.Presence(0, u)
 	if err != nil {
-		return text.Plain(u.Mention())
+		ready := s.Ready()
+		if ready.User.ID != u {
+			return text.Plain("Unknown user " + u.String())
+		}
+
+		discordUser = ready.User
 	}
 
-	user := NewUser(p.User)
-	user.WithPresence(*p)
+	user := NewUser(discordUser)
+	if p != nil {
+		user.WithPresence(*p)
+	}
 	user.WithState(s)
 	user.Prefetch()
 
@@ -71,7 +80,7 @@ func NewUserText(s *ningen.State, u discord.UserID) text.Rich {
 		},
 	}
 
-	if p.User.Bot {
+	if discordUser.Bot {
 		rich.Content += " "
 		rich.Segments = append(rich.Segments,
 			colored.NewBlurple(segutil.Write(&rich, "[BOT]")),
@@ -164,11 +173,8 @@ func (um *User) Prefetch() {
 
 // DisplayName returns either the nickname or the username.
 func (um *User) DisplayName() string {
-	if um.guildID.IsValid() {
-		m, err := um.store.Member(um.guildID, um.user.ID)
-		if err == nil && m.Nick != "" {
-			return m.Nick
-		}
+	if m := um.getMember(); m != nil && m.Nick != "" {
+		return m.Nick
 	}
 
 	return um.user.Username
@@ -310,7 +316,9 @@ func (um *User) getGuild() *discord.Guild {
 }
 
 func (um *User) getMember() *discord.Member {
-	if !um.guildID.IsValid() {
+	// 0000 isn't a valid discriminator; the user is probably a webhook.
+	// Fallback to the actual user.
+	if !um.guildID.IsValid() || (um.user.Discriminator == "0000" && um.user.Bot) {
 		return nil
 	}
 
@@ -327,6 +335,7 @@ func (um *User) getMember() *discord.Member {
 		return nil
 	}
 
+	um.user = m.User
 	um.member = m
 	return m
 }

@@ -14,7 +14,7 @@ type boolStamp struct {
 
 var _ customType = (*boolStamp)(nil)
 
-func (bs boolStamp) Marshal() string {
+func (bs *boolStamp) Marshal() string {
 	if bs.stamp > 0 {
 		return bs.stamp.String()
 	}

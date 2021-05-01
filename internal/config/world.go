@@ -17,7 +17,7 @@ var world = &registry{
 
 // MentionOnReply returns true if message replies should mention users.
 func MentionOnReply(timestamp time.Time) bool {
-	v := world.get(0).(boolStamp)
+	v := world.get(0).(*boolStamp)
 
 	if v.stamp > 0 {
 		return timestamp.Add(v.stamp).Before(time.Now())

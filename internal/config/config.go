@@ -25,6 +25,8 @@ func (c config) Marshal(dst map[string]string) error {
 		dst[c.Name] = strconv.FormatBool(v)
 	case string:
 		dst[c.Name] = v
+	case customType:
+		dst[c.Name] = v.Marshal()
 	default:
 		return cchat.ErrInvalidConfigAtField{
 			Key: c.Name,
@@ -50,7 +52,6 @@ func (c *config) Unmarshal(src map[string]string) (err error) {
 		c.Value = strVal
 	case customType:
 		err = v.Unmarshal(strVal)
-		c.Value = v
 	default:
 		err = fmt.Errorf("unknown type %T", c.Value)
 	}
@@ -81,7 +82,7 @@ func (reg *registry) Configuration() (map[string]string, error) {
 	reg.mutex.RLock()
 	defer reg.mutex.RUnlock()
 
-	var configMap = map[string]string{}
+	configMap := make(map[string]string, len(reg.configs))
 
 	for _, config := range reg.configs {
 		if err := config.Marshal(configMap); err != nil {

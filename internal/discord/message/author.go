@@ -60,13 +60,25 @@ func richUser(rich *text.Rich, user *mention.User) (start, end int) {
 	return
 }
 
+// ID returns the author's ID. The ID may not be a valid Discord user ID if the
+// user is not a valid (real) user (e.g. webhooks).
 func (a Author) ID() cchat.ID {
-	return a.user.UserID().String()
+	user := a.user.User()
+
+	id := user.ID.String()
+
+	// Treat pseudo-users specially.
+	if user.Discriminator == "0000" {
+		id += "_" + user.Username
+	}
+
+	return id
 }
 
 // Name subscribes the author to the global name label registry.
 func (a Author) Name(_ context.Context, l cchat.LabelContainer) (func(), error) {
-	return a.state.Labels.AddMemberLabel(a.user.GuildID(), a.user.UserID(), l), nil
+	l.SetLabel(a.name)
+	return func() {}, nil
 }
 
 const authorReplyingTo = " replying to "

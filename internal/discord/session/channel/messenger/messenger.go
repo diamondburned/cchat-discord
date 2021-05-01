@@ -2,7 +2,6 @@ package messenger
 
 import (
 	"context"
-	"sort"
 
 	"github.com/diamondburned/arikawa/v2/discord"
 	"github.com/diamondburned/arikawa/v2/gateway"
@@ -38,7 +37,7 @@ func (msgr *Messenger) JoinServer(ctx context.Context, ct cchat.MessagesContaine
 		return nil, err
 	}
 
-	var addcancel = funcutil.NewCancels()
+	addcancel := funcutil.NewCancels()
 
 	if msgr.GuildID.IsValid() {
 		// Subscribe to typing events.
@@ -62,19 +61,9 @@ func (msgr *Messenger) JoinServer(ctx context.Context, ct cchat.MessagesContaine
 		}))
 	}
 
-	// Only do all this if we even have any messages.
-	if len(m) > 0 {
-		// Sort messages chronologically using the ID so that the oldest messages
-		// (ones with the smallest snowflake) is in front.
-		sort.Slice(m, func(i, j int) bool { return m[i].ID < m[j].ID })
-
-		// Iterate from the earliest messages to the latest messages.
-		for _, m := range m {
-			ct.CreateMessage(message.NewBacklogMessage(m, msgr.State))
-		}
-
-		// Mark this channel as read.
-		msgr.State.ReadState.MarkRead(msgr.ID, m[len(m)-1].ID)
+	// Iterate from the earliest messages to the latest messages.
+	for _, m := range m {
+		ct.CreateMessage(message.NewBacklogMessage(m, msgr.State))
 	}
 
 	// Bind the handler.
@@ -82,7 +71,6 @@ func (msgr *Messenger) JoinServer(ctx context.Context, ct cchat.MessagesContaine
 		msgr.State.AddHandler(func(m *gateway.MessageCreateEvent) {
 			if m.ChannelID == msgr.ID {
 				ct.CreateMessage(message.NewGuildMessageCreate(m, msgr.State))
-				msgr.State.ReadState.MarkRead(msgr.ID, m.ID)
 			}
 		}),
 		msgr.State.AddHandler(func(m *gateway.MessageUpdateEvent) {
