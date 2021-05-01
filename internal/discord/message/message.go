@@ -284,11 +284,12 @@ func newRegularContent(m discord.Message, s *state.Instance) Message {
 	var content text.Rich
 
 	if m.ReferencedMessage != nil {
+		content.Content = "> "
 		refContent := []byte(m.ReferencedMessage.Content)
 		segments.ParseWithMessageRich(&content, refContent, &m, s.Cabinet)
 
 		content = segments.Ellipsize(content, 100)
-		content.Content = ">" + content.Content + "\n"
+		content.Content += "\n"
 
 		segutil.Add(&content,
 			reference.NewMessageSegment(0, len(content.Content)-1, m.ReferencedMessage.ID),
